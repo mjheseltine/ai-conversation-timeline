@@ -1,4 +1,3 @@
-/* --- General layout --- */
 body {
   font-family: Arial, sans-serif;
   background: #f5f8fa;
@@ -29,20 +28,26 @@ body {
   box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
-/* --- Avatar and text layout --- */
+/* --- Avatar styling --- */
 .avatar {
   width: 45px;
   height: 45px;
   border-radius: 50%;
   margin-right: 10px;
   flex-shrink: 0;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 16px;
 }
 
+/* --- Post text and buttons --- */
 .content {
   flex: 1;
 }
 
-/* --- Buttons --- */
 button {
   background-color: #1da1f2;
   color: white;
@@ -55,4 +60,10 @@ button {
 
 button:hover {
   background-color: #0d8de1;
+}
+
+.actions {
+  font-size: 0.9em;
+  color: #555;
+  margin-bottom: 5px;
 }
