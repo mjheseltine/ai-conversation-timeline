@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Conversation View</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    .conversation {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #fff;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .reply {
+      margin-left: 40px;
+      border-left: 2px solid #eee;
+      padding-left: 10px;
+      margin-top: 10px;
+    }
+    #backBtn {
+      display: block;
+      width: fit-content;
+      margin: 20px auto;
+      background: #e6ecf0;
+      color: #333;
+      padding: 8px 16px;
+      border-radius: 20px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="conversation">
+    <div class="avatar" style="background:#1DA1F2;">U1</div>
+    <strong>User123:</strong> Post claims Trump's policies hurt manufacturing while favoring Big Tech...
+
+    <div class="reply"><strong>PolicyNerd:</strong> Both parties contributed to tech monopolies though.</div>
+    <div class="reply"><strong>EconGuy:</strong> Reshoring takes time; this criticism oversimplifies things.</div>
+
+    <div id="actions" style="margin-top:15px;">
+      <button id="likeBtn">❤️ Like (<span id="likeCount">0</span>)</button>
+      <button id="retweetBtn">🔁 Repost (<span id="retweetCount">0</span>)</button>
+      <button id="commentBtn">💬 Comment</button>
+    </div>
+
+    <div id="commentBox" style="display:none; margin-top:10px;">
+      <textarea id="commentInput" rows="3" style="width:100%;"></textarea><br>
+      <button id="submitComment">Submit Comment</button>
+    </div>
+
+    <div id="commentSection" style="margin-top:15px;"></div>
+  </div>
+
+  <a id="backBtn" href="../index.html">⬅️ Back to Timeline</a>
+
+  <script>
+    // --- State variables ---
+    let likes = 0;
+    let retweets = 0;
+    let comments = [];
+
+    // --- Interaction buttons ---
+    document.getElementById("likeBtn").addEventListener("click", () => {
+      likes++;
+      document.getElementById("likeCount").textContent = likes;
+      sendToQualtrics("like", "post1");
+    });
+
+    document.getElementById("retweetBtn").addEventListener("click", () => {
+      retweets++;
+      document.getElementById("retweetCount").textContent = retweets;
+      sendToQualtrics("retweet", "post1");
+    });
+
+    document.getElementById("commentBtn").addEventListener("click", () => {
+      document.getElementById("commentBox").style.display = "block";
+    });
+
+    document.getElementById("submitComment").addEventListener("click", () => {
+      const text = document.getElementById("commentInput").value.trim();
+      if (!text) return;
+      comments.push(text);
+      renderComments();
+      document.getElementById("commentInput").value = "";
+      document.getElementById("commentBox").style.display = "none";
+      sendToQualtrics("comment", { post: "post1", text });
+    });
+
+    function renderComments() {
+      const section = document.getElementById("commentSection");
+      section.innerHTML = comments
+        .map(c => `<div class="reply"><strong>You:</strong> ${c}</div>`)
+        .join("");
+    }
+
+    function sendToQualtrics(type, data) {
+      window.parent.postMessage({ type, data }, "*");
+    }
+  </script>
+</body>
+</html>
