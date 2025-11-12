@@ -118,7 +118,12 @@ fetch("data/posts.json")
 
      const c=document.createElement("div");
      c.className="content";
-     c.innerHTML=`<div class="name">${p.author}</div><div class="text">${p.text}</div>`;
+     c.innerHTML = `
+  <div class="name">${p.author}</div>
+  <div class="text">${p.text}</div>
+  ${p.image ? `<img src="${p.image}" alt="" class="thumb">` : ""}
+`;
+
 
      // actions
      const actions=document.createElement("div");
