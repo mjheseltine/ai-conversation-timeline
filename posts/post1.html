@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Conversation View</title>
+  <link rel="stylesheet" href="../assets/styles.css">
+  <style>
+    .conversation {
+      max-width: 600px;
+      margin: 20px auto;
+      background: #fff;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .reply {
+      margin-left: 40px;
+      border-left: 2px solid #eee;
+      padding-left: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="conversation">
+    <p><strong>User123:</strong> Post claims Trump's policies hurt manufacturing while favoring Big Tech...</p>
+
+    <div class="reply"><strong>PolicyNerd:</strong> Both parties contributed to tech monopolies though.</div>
+    <div class="reply"><strong>EconGuy:</strong> Reshoring takes time; this criticism oversimplifies things.</div>
+
+    <div style="margin-top:15px;">
+      <button onclick="likePost()">❤️ Like</button>
+      <button onclick="retweetPost()">🔁 Retweet</button>
+      <button onclick="commentPost()">💬 Comment</button>
+    </div>
+
+    <div id="commentBox" style="display:none; margin-top:10px;">
+      <textarea id="commentInput" rows="3" style="width:100%;"></textarea><br>
+      <button onclick="submitComment()">Submit Comment</button>
+    </div>
+  </div>
+
+  <script>
+    // --- Send messages back to Qualtrics ---
+    function sendToQualtrics(type, data) {
+      window.parent.postMessage({ type, data }, "*");
+    }
+
+    function likePost() {
+      sendToQualtrics("like", "post1");
+      alert("You liked this post!");
+    }
+
+    function retweetPost() {
+      sendToQualtrics("retweet", "post1");
+      alert("You retweeted this post!");
+    }
+
+    function commentPost() {
+      document.getElementById("commentBox").style.display = "block";
+    }
+
+    function submitComment() {
+      const text = document.getElementById("commentInput").value.trim();
+      if (text) {
+        sendToQualtrics("comment", { post: "post1", text });
+        alert("Comment submitted!");
+      }
+    }
+  </script>
+</body>
+</html>
