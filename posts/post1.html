@@ -154,7 +154,12 @@ function createPost(data,isMain){
   avatar.textContent = initials(data.author);
   const content = document.createElement("div");
   content.className = "content";
-  content.innerHTML = `<div class="name">${data.author}</div><div class="text">${data.text}</div>`;
+  content.innerHTML = `
+  <div class="name">${data.author}</div>
+  <div class="text">${data.text}</div>
+  ${data.image ? `<img src="../${data.image}" alt="" class="thumb">` : ""}
+`;
+
 
   if(isMain){
     const actions = document.createElement("div");
