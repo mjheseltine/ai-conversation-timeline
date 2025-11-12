@@ -118,15 +118,15 @@ function colorFromName(name){
 }
 function sendToQualtrics(type,data){window.parent.postMessage({type,data},"*");}
 
-// ---------- State (per session) ----------
-let state = JSON.parse(sessionStorage.getItem("postState_"+postId) || "{}");
-if(!state.likes) state.likes=0;
-if(!state.retweets) state.retweets=0;
-if(!state.comments) state.comments=[];
-if(typeof state.liked==="undefined") state.liked=false;
-if(typeof state.retweeted==="undefined") state.retweeted=false;
-save();
-function save(){sessionStorage.setItem("postState_"+postId,JSON.stringify(state));}
+// ---------- Shared session state ----------
+let timelineState = JSON.parse(sessionStorage.getItem("timelineState") || "{}");
+let state = timelineState[postId] || {likes:0, retweets:0, comments:[], liked:false, retweeted:false};
+
+function save(){
+  timelineState[postId] = state;
+  sessionStorage.setItem("timelineState", JSON.stringify(timelineState));
+}
+
 
 // ---------- Render ----------
 const convo = document.getElementById("conversation");
