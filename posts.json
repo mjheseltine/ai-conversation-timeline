@@ -1,0 +1,22 @@
+[
+  {
+    "id": "post1",
+    "author": "User123",
+    "avatar": "avatars/user1.png",
+    "text": "Post claims Trump's policies hurt manufacturing while favoring Big Tech...",
+    "aiSummary": "Post criticizes Trump’s manufacturing record while noting tech favoritism.",
+    "likes": 0,
+    "retweets": 0,
+    "comments": 3
+  },
+  {
+    "id": "post2",
+    "author": "PatriotEcon",
+    "avatar": "avatars/user2.png",
+    "text": "Actually, the data shows factory jobs *increased* after 2019.",
+    "aiSummary": "A counterpoint defending Trump’s record using job data.",
+    "likes": 2,
+    "retweets": 1,
+    "comments": 1
+  }
+]
