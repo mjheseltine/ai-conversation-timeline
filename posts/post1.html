@@ -1,105 +1,199 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Conversation View</title>
-  <link rel="stylesheet" href="../assets/styles.css">
-  <style>
-    .conversation {
-      max-width: 600px;
-      margin: 20px auto;
-      background: #fff;
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .reply {
-      margin-left: 40px;
-      border-left: 2px solid #eee;
-      padding-left: 10px;
-      margin-top: 10px;
-    }
-    #backBtn {
-      display: block;
-      width: fit-content;
-      margin: 20px auto;
-      background: #e6ecf0;
-      color: #333;
-      padding: 8px 16px;
-      border-radius: 20px;
-      text-decoration: none;
-      font-weight: bold;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Conversation View</title>
+<style>
+:root {
+  --bg: #f6f7fb;
+  --card: #fff;
+  --muted: #6b7280;
+  --accent: #1f6feb;
+  --radius: 12px;
+  --shadow: 0 4px 12px rgba(35, 40, 50, 0.08);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+body { background: var(--bg); margin: 20px; color: #111; }
+.container { max-width: 800px; margin: 0 auto; }
+
+.post {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  box-shadow: var(--shadow);
+  transition: transform .15s ease;
+}
+.post:hover { transform: translateY(-2px); }
+
+.avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  flex: 0 0 48px; display: grid; place-items: center;
+  color: #fff; font-weight: 700; font-size: 14px;
+  background: linear-gradient(135deg,#1f6feb,#3b82f6);
+}
+.content { flex: 1; }
+.name { font-weight: 700; color: #0f1724; }
+.text { margin-top: 6px; font-size: 15px; line-height: 1.45; color: #0f1724; }
+
+.actions {
+  margin-top: 10px; display: flex; gap: 20px; color: var(--muted); font-size: 14px;
+}
+.actions button {
+  background: none; border: none; cursor: pointer;
+  color: inherit; display: flex; align-items: center; gap: 4px;
+  padding: 4px 6px; border-radius: 6px;
+}
+.actions button:hover { background: #f1f5f9; transform: scale(1.05); }
+.actions button.liked { color: #e0245e; }
+.actions button.retweeted { color: #17bf63; }
+
+.comment-box { margin-top: 12px; }
+.comment-box textarea {
+  width: 100%; border-radius: 8px; border: 1px solid #e2e8f0;
+  font-size: 14px; padding: 8px; resize: vertical;
+}
+.comment-section { margin-top: 8px; }
+.reply {
+  background: #f0f2f5; border-radius: 8px;
+  padding: 6px 10px; margin-top: 6px; font-size: 0.9em;
+}
+#backBtn {
+  display: block; width: fit-content;
+  margin: 20px auto 0; background: #e6ecf0;
+  color: #333; padding: 8px 16px;
+  border-radius: 20px; text-decoration: none; font-weight: bold;
+}
+#backBtn:hover { background: #d8e2e7; }
+</style>
 </head>
 
 <body>
-  <div class="conversation">
-    <div class="avatar" style="background:#1DA1F2;">U1</div>
-    <strong>User123:</strong> Post claims Trump's policies hurt manufacturing while favoring Big Tech...
+<div class="container">
+  <article class="post" id="main-post">
+    <div class="avatar" id="avatar"></div>
+    <div class="content">
+      <div class="name" id="author"></div>
+      <div class="text" id="postText"></div>
+      <div class="actions" id="actions"></div>
 
-    <div class="reply"><strong>PolicyNerd:</strong> Both parties contributed to tech monopolies though.</div>
-    <div class="reply"><strong>EconGuy:</strong> Reshoring takes time; this criticism oversimplifies things.</div>
-
-    <div id="actions" style="margin-top:15px;">
-      <button id="likeBtn">❤️ Like (<span id="likeCount">0</span>)</button>
-      <button id="retweetBtn">🔁 Repost (<span id="retweetCount">0</span>)</button>
-      <button id="commentBtn">💬 Comment</button>
+      <div class="comment-box" id="commentBox" style="display:none;">
+        <textarea rows="2" placeholder="Write a comment..."></textarea>
+        <button id="submitComment" style="margin-top:6px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;">Submit</button>
+      </div>
+      <div class="comment-section" id="commentSection"></div>
     </div>
+  </article>
 
-    <div id="commentBox" style="display:none; margin-top:10px;">
-      <textarea id="commentInput" rows="3" style="width:100%;"></textarea><br>
-      <button id="submitComment">Submit Comment</button>
-    </div>
+  <a href="../index.html" id="backBtn">⬅️ Back to Timeline</a>
+</div>
 
-    <div id="commentSection" style="margin-top:15px;"></div>
-  </div>
+<script>
+// ---------- Config for this post ----------
+const postId = "post1";  // change for each post file
+const postData = {
+  author: "User123",
+  text: "Post claims Trump's policies hurt manufacturing while favoring Big Tech...",
+};
 
-  <a id="backBtn" href="../index.html">⬅️ Back to Timeline</a>
+// ---------- Helpers ----------
+function initials(name){return name.split(/\s+/).map(n=>n[0].toUpperCase()).slice(0,2).join("");}
+function colorFromName(name){
+  const colors = [
+    "linear-gradient(135deg,#1f6feb,#3b82f6)",
+    "linear-gradient(135deg,#10b981,#34d399)",
+    "linear-gradient(135deg,#f59e0b,#fbbf24)",
+    "linear-gradient(135deg,#ec4899,#f472b6)",
+    "linear-gradient(135deg,#6366f1,#8b5cf6)"
+  ];
+  const i = name.charCodeAt(0) % colors.length;
+  return colors[i];
+}
+function sendToQualtrics(type,data){window.parent.postMessage({type,data},"*");}
 
-  <script>
-    // --- State variables ---
-    let likes = 0;
-    let retweets = 0;
-    let comments = [];
+// ---------- State & persistence ----------
+let state = JSON.parse(sessionStorage.getItem("postState_"+postId) || "{}");
+if(!state.likes) state.likes=0;
+if(!state.retweets) state.retweets=0;
+if(!state.comments) state.comments=[];
+if(typeof state.liked==="undefined") state.liked=false;
+if(typeof state.retweeted==="undefined") state.retweeted=false;
+save();
 
-    // --- Interaction buttons ---
-    document.getElementById("likeBtn").addEventListener("click", () => {
-      likes++;
-      document.getElementById("likeCount").textContent = likes;
-      sendToQualtrics("like", "post1");
-    });
+function save(){sessionStorage.setItem("postState_"+postId,JSON.stringify(state));}
 
-    document.getElementById("retweetBtn").addEventListener("click", () => {
-      retweets++;
-      document.getElementById("retweetCount").textContent = retweets;
-      sendToQualtrics("retweet", "post1");
-    });
+// ---------- Render ----------
+document.getElementById("avatar").textContent = initials(postData.author);
+document.getElementById("avatar").style.background = colorFromName(postData.author);
+document.getElementById("author").textContent = postData.author;
+document.getElementById("postText").textContent = postData.text;
 
-    document.getElementById("commentBtn").addEventListener("click", () => {
-      document.getElementById("commentBox").style.display = "block";
-    });
+const actions = document.getElementById("actions");
+actions.innerHTML = `
+  <button class="like ${state.liked?"liked":""}">
+    ❤️ <span>${state.likes}</span>
+  </button>
+  <button class="retweet ${state.retweeted?"retweeted":""}">
+    🔁 <span>${state.retweets}</span>
+  </button>
+  <button class="comment">
+    💬 <span>${state.comments.length}</span>
+  </button>
+`;
 
-    document.getElementById("submitComment").addEventListener("click", () => {
-      const text = document.getElementById("commentInput").value.trim();
-      if (!text) return;
-      comments.push(text);
-      renderComments();
-      document.getElementById("commentInput").value = "";
-      document.getElementById("commentBox").style.display = "none";
-      sendToQualtrics("comment", { post: "post1", text });
-    });
+const likeBtn = actions.querySelector(".like");
+const rtBtn = actions.querySelector(".retweet");
+const commentBtn = actions.querySelector(".comment");
 
-    function renderComments() {
-      const section = document.getElementById("commentSection");
-      section.innerHTML = comments
-        .map(c => `<div class="reply"><strong>You:</strong> ${c}</div>`)
-        .join("");
-    }
+const commentBox = document.getElementById("commentBox");
+const commentSection = document.getElementById("commentSection");
+const submitComment = document.getElementById("submitComment");
 
-    function sendToQualtrics(type, data) {
-      window.parent.postMessage({ type, data }, "*");
-    }
-  </script>
+// ---------- Actions ----------
+likeBtn.onclick=()=>{
+  state.liked = !state.liked;
+  state.likes += state.liked ? 1 : -1;
+  likeBtn.classList.toggle("liked",state.liked);
+  likeBtn.querySelector("span").textContent = state.likes;
+  save();
+  sendToQualtrics("like",{post:postId,liked:state.liked});
+};
+
+rtBtn.onclick=()=>{
+  state.retweeted = !state.retweeted;
+  state.retweets += state.retweeted ? 1 : -1;
+  rtBtn.classList.toggle("retweeted",state.retweeted);
+  rtBtn.querySelector("span").textContent = state.retweets;
+  save();
+  sendToQualtrics("retweet",{post:postId,retweeted:state.retweeted});
+};
+
+commentBtn.onclick=()=>{
+  commentBox.style.display = commentBox.style.display==="none" ? "block" : "none";
+};
+
+submitComment.onclick=()=>{
+  const txt = commentBox.querySelector("textarea").value.trim();
+  if(!txt) return;
+  state.comments.push(txt);
+  renderComments();
+  commentBox.querySelector("textarea").value="";
+  commentBox.style.display="none";
+  commentBtn.querySelector("span").textContent = state.comments.length;
+  save();
+  sendToQualtrics("comment",{post:postId,text:txt});
+};
+
+// ---------- Comments ----------
+function renderComments(){
+  commentSection.innerHTML = state.comments
+    .map(c=>`<div class="reply"><strong>You:</strong> ${c}</div>`)
+    .join("");
+}
+renderComments();
+</script>
 </body>
 </html>
