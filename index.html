@@ -169,8 +169,10 @@ fetch("data/posts.json")
    });
    saveState();
  });
+
+  window.addEventListener("focus", () => location.reload());
 </script>
 </body>
 </html>
 
-window.addEventListener("focus", () => location.reload());
+
