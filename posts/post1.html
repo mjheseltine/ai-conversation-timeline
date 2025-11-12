@@ -56,11 +56,22 @@ body { background: var(--bg); margin: 20px; color: #111; }
   width: 100%; border-radius: 8px; border: 1px solid #e2e8f0;
   font-size: 14px; padding: 8px; resize: vertical;
 }
-.comment-section { margin-top: 8px; }
+.comment-section { margin-top: 12px; }
 .reply {
   background: #f0f2f5; border-radius: 8px;
   padding: 6px 10px; margin-top: 6px; font-size: 0.9em;
 }
+
+.ai-summary {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: #fffdf8; border: 1px solid #fbe5b3;
+  padding: 12px; border-radius: 10px; box-shadow: var(--shadow);
+  margin-top: 10px;
+}
+.ai-summary .avatar {
+  background: linear-gradient(135deg,#6366f1,#8b5cf6);
+}
+
 #backBtn {
   display: block; width: fit-content;
   margin: 20px auto 0; background: #e6ecf0;
@@ -72,32 +83,25 @@ body { background: var(--bg); margin: 20px; color: #111; }
 </head>
 
 <body>
-<div class="container">
-  <article class="post" id="main-post">
-    <div class="avatar" id="avatar"></div>
-    <div class="content">
-      <div class="name" id="author"></div>
-      <div class="text" id="postText"></div>
-      <div class="actions" id="actions"></div>
-
-      <div class="comment-box" id="commentBox" style="display:none;">
-        <textarea rows="2" placeholder="Write a comment..."></textarea>
-        <button id="submitComment" style="margin-top:6px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;">Submit</button>
-      </div>
-      <div class="comment-section" id="commentSection"></div>
-    </div>
-  </article>
-
-  <a href="../index.html" id="backBtn">⬅️ Back to Timeline</a>
-</div>
+<div class="container" id="conversation"></div>
+<a href="../index.html" id="backBtn">⬅️ Back to Timeline</a>
 
 <script>
-// ---------- Config for this post ----------
-const postId = "post1";  // change for each post file
-const postData = {
+// ---------- Configuration ----------
+const postId = "post1";  // Change per file
+const mainPost = {
   author: "User123",
-  text: "Post claims Trump's policies hurt manufacturing while favoring Big Tech...",
+  text: "Post claims Trump's policies hurt manufacturing while favoring Big Tech..."
 };
+const aiSummary = {
+  author: "AI Summary 🤖",
+  text: "Post criticizes Trump's manufacturing record while noting tech favoritism."
+};
+const replies = [
+  { author: "PolicyNerd", text: "Both parties contributed to tech monopolies though." },
+  { author: "EconGuy", text: "Reshoring takes time; this criticism oversimplifies things." },
+  { author: "TechWatcher", text: "Honestly, this argument gets made every cycle." }
+];
 
 // ---------- Helpers ----------
 function initials(name){return name.split(/\s+/).map(n=>n[0].toUpperCase()).slice(0,2).join("");}
@@ -114,7 +118,7 @@ function colorFromName(name){
 }
 function sendToQualtrics(type,data){window.parent.postMessage({type,data},"*");}
 
-// ---------- State & persistence ----------
+// ---------- State (per session) ----------
 let state = JSON.parse(sessionStorage.getItem("postState_"+postId) || "{}");
 if(!state.likes) state.likes=0;
 if(!state.retweets) state.retweets=0;
@@ -122,78 +126,120 @@ if(!state.comments) state.comments=[];
 if(typeof state.liked==="undefined") state.liked=false;
 if(typeof state.retweeted==="undefined") state.retweeted=false;
 save();
-
 function save(){sessionStorage.setItem("postState_"+postId,JSON.stringify(state));}
 
 // ---------- Render ----------
-document.getElementById("avatar").textContent = initials(postData.author);
-document.getElementById("avatar").style.background = colorFromName(postData.author);
-document.getElementById("author").textContent = postData.author;
-document.getElementById("postText").textContent = postData.text;
+const convo = document.getElementById("conversation");
+convo.innerHTML = "";
 
-const actions = document.getElementById("actions");
-actions.innerHTML = `
-  <button class="like ${state.liked?"liked":""}">
-    ❤️ <span>${state.likes}</span>
-  </button>
-  <button class="retweet ${state.retweeted?"retweeted":""}">
-    🔁 <span>${state.retweets}</span>
-  </button>
-  <button class="comment">
-    💬 <span>${state.comments.length}</span>
-  </button>
-`;
+// Main post
+convo.appendChild(createPost(mainPost,true));
 
-const likeBtn = actions.querySelector(".like");
-const rtBtn = actions.querySelector(".retweet");
-const commentBtn = actions.querySelector(".comment");
+// AI summary
+convo.appendChild(createAISummary(aiSummary));
 
-const commentBox = document.getElementById("commentBox");
-const commentSection = document.getElementById("commentSection");
-const submitComment = document.getElementById("submitComment");
+// Replies
+replies.forEach(r => convo.appendChild(createPost(r,false)));
 
-// ---------- Actions ----------
-likeBtn.onclick=()=>{
-  state.liked = !state.liked;
-  state.likes += state.liked ? 1 : -1;
-  likeBtn.classList.toggle("liked",state.liked);
-  likeBtn.querySelector("span").textContent = state.likes;
-  save();
-  sendToQualtrics("like",{post:postId,liked:state.liked});
-};
+// User comments (if any)
+renderUserComments();
 
-rtBtn.onclick=()=>{
-  state.retweeted = !state.retweeted;
-  state.retweets += state.retweeted ? 1 : -1;
-  rtBtn.classList.toggle("retweeted",state.retweeted);
-  rtBtn.querySelector("span").textContent = state.retweets;
-  save();
-  sendToQualtrics("retweet",{post:postId,retweeted:state.retweeted});
-};
+// ---------- Post creation ----------
+function createPost(data,isMain){
+  const wrapper = document.createElement("article");
+  wrapper.className = "post";
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.style.background = colorFromName(data.author);
+  avatar.textContent = initials(data.author);
+  const content = document.createElement("div");
+  content.className = "content";
+  content.innerHTML = `<div class="name">${data.author}</div><div class="text">${data.text}</div>`;
 
-commentBtn.onclick=()=>{
-  commentBox.style.display = commentBox.style.display==="none" ? "block" : "none";
-};
+  if(isMain){
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    actions.innerHTML = `
+      <button class="like ${state.liked?"liked":""}">❤️ <span>${state.likes}</span></button>
+      <button class="retweet ${state.retweeted?"retweeted":""}">🔁 <span>${state.retweets}</span></button>
+      <button class="comment">💬 <span>${state.comments.length}</span></button>
+    `;
+    const commentBox = document.createElement("div");
+    commentBox.className = "comment-box";
+    commentBox.style.display = "none";
+    commentBox.innerHTML = `
+      <textarea rows="2" placeholder="Write a comment..."></textarea>
+      <button style="margin-top:6px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;">Submit</button>
+    `;
+    const commentSection = document.createElement("div");
+    commentSection.className = "comment-section";
 
-submitComment.onclick=()=>{
-  const txt = commentBox.querySelector("textarea").value.trim();
-  if(!txt) return;
-  state.comments.push(txt);
-  renderComments();
-  commentBox.querySelector("textarea").value="";
-  commentBox.style.display="none";
-  commentBtn.querySelector("span").textContent = state.comments.length;
-  save();
-  sendToQualtrics("comment",{post:postId,text:txt});
-};
+    content.append(actions,commentBox,commentSection);
 
-// ---------- Comments ----------
-function renderComments(){
-  commentSection.innerHTML = state.comments
-    .map(c=>`<div class="reply"><strong>You:</strong> ${c}</div>`)
-    .join("");
+    // Buttons
+    const [likeBtn,rtBtn,commentBtn] = actions.querySelectorAll("button");
+    const submitBtn = commentBox.querySelector("button");
+    const textarea = commentBox.querySelector("textarea");
+
+    likeBtn.onclick = () => {
+      state.liked = !state.liked;
+      state.likes += state.liked ? 1 : -1;
+      likeBtn.classList.toggle("liked",state.liked);
+      likeBtn.querySelector("span").textContent = state.likes;
+      save();
+      sendToQualtrics("like",{post:postId,liked:state.liked});
+    };
+
+    rtBtn.onclick = () => {
+      state.retweeted = !state.retweeted;
+      state.retweets += state.retweeted ? 1 : -1;
+      rtBtn.classList.toggle("retweeted",state.retweeted);
+      rtBtn.querySelector("span").textContent = state.retweets;
+      save();
+      sendToQualtrics("retweet",{post:postId,retweeted:state.retweeted});
+    };
+
+    commentBtn.onclick = () => {
+      commentBox.style.display = commentBox.style.display==="none" ? "block" : "none";
+    };
+
+    submitBtn.onclick = () => {
+      const txt = textarea.value.trim();
+      if(!txt) return;
+      state.comments.push(txt);
+      textarea.value="";
+      commentBox.style.display="none";
+      commentBtn.querySelector("span").textContent = state.comments.length;
+      save();
+      renderUserComments();
+      sendToQualtrics("comment",{post:postId,text:txt});
+    };
+  }
+
+  wrapper.append(avatar,content);
+  return wrapper;
 }
-renderComments();
+
+// ---------- AI Summary creation ----------
+function createAISummary(ai){
+  const el=document.createElement("div");
+  el.className="ai-summary";
+  el.innerHTML=`
+    <div class="avatar">🤖</div>
+    <div class="content">
+      <div class="name">${ai.author}</div>
+      <div class="text">${ai.text}</div>
+    </div>`;
+  return el;
+}
+
+// ---------- Render user comments ----------
+function renderUserComments(){
+  const main = convo.querySelector(".post"); // first post
+  const commentSection = main.querySelector(".comment-section");
+  if(!commentSection) return;
+  commentSection.innerHTML = state.comments.map(c=>`<div class="reply"><strong>You:</strong> ${c}</div>`).join("");
+}
 </script>
 </body>
 </html>
