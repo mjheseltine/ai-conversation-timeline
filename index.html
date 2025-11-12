@@ -1,123 +1,199 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Interactive Timeline</title>
-  <link rel="stylesheet" href="assets/styles.css">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Interactive Timeline</title>
+<style>
+:root {
+  --bg: #f6f7fb;
+  --card: #fff;
+  --muted: #6b7280;
+  --accent: #1f6feb;
+  --radius: 12px;
+  --shadow: 0 4px 12px rgba(35, 40, 50, 0.08);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+body { background: var(--bg); margin: 20px; color: #111; }
+#timeline { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+
+.post {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  box-shadow: var(--shadow);
+  position: relative;
+  transition: transform .15s ease;
+}
+.post:hover { transform: translateY(-2px); }
+
+.avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  flex: 0 0 48px; display: grid; place-items: center;
+  color: #fff; font-weight: 700; font-size: 14px;
+  background: linear-gradient(135deg,#1f6feb,#3b82f6);
+}
+.content { flex: 1; }
+.name { font-weight: 700; color: #0f1724; }
+.text { margin-top: 6px; font-size: 15px; line-height: 1.45; color: #0f1724; }
+
+.actions {
+  margin-top: 8px; display: flex; gap: 20px; color: var(--muted); font-size: 14px;
+}
+.actions button {
+  background: none; border: none; cursor: pointer;
+  color: inherit; display: flex; align-items: center; gap: 4px;
+  padding: 4px 6px; border-radius: 6px;
+}
+.actions button:hover { background: #f1f5f9; transform: scale(1.05); }
+.actions button.liked { color: #e0245e; }
+.actions button.retweeted { color: #17bf63; }
+
+.comment-box { margin-top: 10px; }
+.comment-box textarea {
+  width: 100%; border-radius: 8px; border: 1px solid #e2e8f0;
+  font-size: 14px; padding: 8px; resize: vertical;
+}
+.comment-section { margin-top: 8px; }
+.reply {
+  background: #f0f2f5; border-radius: 8px;
+  padding: 6px 10px; margin-top: 6px; font-size: 0.9em;
+}
+.view-link {
+  margin-top: 8px; display: inline-block; color: var(--accent);
+  font-size: 14px; text-decoration: none; font-weight: 500;
+}
+.view-link:hover { text-decoration: underline; }
+</style>
 </head>
 <body>
-  <div id="timeline"></div>
+<div id="timeline"></div>
 
-  <script>
-    // --- Helper functions for avatar initials & colors ---
-    function getInitials(name) {
-      return name
-        .split(' ')
-        .map(n => n[0].toUpperCase())
-        .slice(0, 2)
-        .join('');
-    }
+<script>
+// ---------- helpers ----------
+function initials(name){return name.split(/\s+/).map(n=>n[0].toUpperCase()).slice(0,2).join("");}
+function colorFromName(name){
+  const colors = [
+    "linear-gradient(135deg,#1f6feb,#3b82f6)",
+    "linear-gradient(135deg,#10b981,#34d399)",
+    "linear-gradient(135deg,#f59e0b,#fbbf24)",
+    "linear-gradient(135deg,#ec4899,#f472b6)",
+    "linear-gradient(135deg,#6366f1,#8b5cf6)"
+  ];
+  const i = name.charCodeAt(0) % colors.length;
+  return colors[i];
+}
+function sendToQualtrics(type,data){window.parent.postMessage({type,data},"*");}
 
-    function getColor(name) {
-      const colors = ['#1DA1F2', '#17BF63', '#E0245E', '#794BC4', '#FFAD1F', '#F45D22'];
-      const index = name.charCodeAt(0) % colors.length;
-      return colors[index];
-    }
+// ---------- state ----------
+let postsState = JSON.parse(localStorage.getItem("timelineState")||"{}");
 
-    // --- Load posts and render timeline ---
-    fetch('data/posts.json')
-      .then(res => res.json())
-      .then(posts => {
-        const timeline = document.getElementById('timeline');
+function saveState(){localStorage.setItem("timelineState",JSON.stringify(postsState));}
 
-        posts.forEach(post => {
-          const div = document.createElement('div');
-          div.className = 'post';
-          div.innerHTML = `
-            <div class="avatar" style="background:${getColor(post.author)}">
-              ${getInitials(post.author)}
-            </div>
-            <div class="content">
-              <p><strong>${post.author}</strong></p>
-              <p>${post.text}</p>
+// ---------- render ----------
+fetch("data/posts.json")
+ .then(r=>r.json())
+ .then(posts=>{
+   const t=document.getElementById("timeline");
+   posts.forEach(p=>{
+     const saved=postsState[p.id]||{likes:p.likes||0,retweets:p.retweets||0,comments:[],liked:false,retweeted:false};
+     postsState[p.id]=saved;
 
-              <div class="actions">
-                ❤️ <span id="like-${post.id}">${post.likes}</span> 
-                🔁 <span id="retweet-${post.id}">${post.retweets}</span> 
-                💬 <span id="comment-count-${post.id}">${post.comments}</span>
-              </div>
+     const card=document.createElement("article");
+     card.className="post";
 
-              <div class="timeline-buttons">
-                <button onclick="likePost('${post.id}')">❤️ Like</button>
-                <button onclick="retweetPost('${post.id}')">🔁 Repost</button>
-                <button onclick="toggleCommentBox('${post.id}')">💬 Comment</button>
-                <button onclick="openPost('${post.id}')">View Conversation</button>
-              </div>
+     const avatar=document.createElement("div");
+     avatar.className="avatar";
+     avatar.style.background=colorFromName(p.author);
+     avatar.textContent=initials(p.author);
 
-              <div id="comment-box-${post.id}" class="comment-box" style="display:none; margin-top:10px;">
-                <textarea id="comment-input-${post.id}" rows="2" style="width:100%;"></textarea><br>
-                <button onclick="submitComment('${post.id}')">Submit Comment</button>
-              </div>
+     const c=document.createElement("div");c.className="content";
+     c.innerHTML=`<div class="name">${p.author}</div><div class="text">${p.text}</div>`;
 
-              <div id="comments-${post.id}" class="comment-section"></div>
-            </div>
-          `;
-          timeline.appendChild(div);
-        });
-      });
+     // actions
+     const actions=document.createElement("div");
+     actions.className="actions";
+     actions.innerHTML=`
+       <button class="like ${saved.liked?"liked":""}" aria-label="Like">
+         ❤️ <span>${saved.likes}</span>
+       </button>
+       <button class="retweet ${saved.retweeted?"retweeted":""}" aria-label="Repost">
+         🔁 <span>${saved.retweets}</span>
+       </button>
+       <button class="comment" aria-label="Comment">
+         💬 <span>${saved.comments.length}</span>
+       </button>
+     `;
+     c.append(actions);
 
-    // --- State tracking ---
-    const postData = {};
+     // comment box
+     const box=document.createElement("div");
+     box.className="comment-box";
+     box.style.display="none";
+     box.innerHTML=`
+       <textarea rows="2" placeholder="Write a comment..."></textarea>
+       <button style="margin-top:6px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;">Submit</button>
+     `;
+     c.append(box);
 
-    // --- Interactions ---
-    function likePost(postId) {
-      if (!postData[postId]) postData[postId] = { likes: 0, retweets: 0, comments: [] };
-      postData[postId].likes++;
-      document.getElementById(`like-${postId}`).textContent = postData[postId].likes;
-      sendToQualtrics("like", postId);
-    }
+     // comment section
+     const comments=document.createElement("div");
+     comments.className="comment-section";
+     comments.innerHTML=saved.comments.map(c=>`<div class="reply"><strong>You:</strong> ${c}</div>`).join("");
+     c.append(comments);
 
-    function retweetPost(postId) {
-      if (!postData[postId]) postData[postId] = { likes: 0, retweets: 0, comments: [] };
-      postData[postId].retweets++;
-      document.getElementById(`retweet-${postId}`).textContent = postData[postId].retweets;
-      sendToQualtrics("retweet", postId);
-    }
+     // view link
+     const link=document.createElement("a");
+     link.href=`posts/${p.id}.html`;
+     link.className="view-link";
+     link.textContent="View Conversation →";
+     c.append(link);
 
-    function toggleCommentBox(postId) {
-      const box = document.getElementById(`comment-box-${postId}`);
-      box.style.display = box.style.display === "none" ? "block" : "none";
-    }
+     // --- event handlers ---
+     const [likeBtn,rtBtn,commentBtn]=actions.querySelectorAll("button");
 
-    function submitComment(postId) {
-      const input = document.getElementById(`comment-input-${postId}`);
-      const text = input.value.trim();
-      if (!text) return;
-      if (!postData[postId]) postData[postId] = { likes: 0, retweets: 0, comments: [] };
+     likeBtn.onclick=()=>{
+       saved.liked=!saved.liked;
+       saved.likes += saved.liked ? 1 : -1;
+       likeBtn.classList.toggle("liked",saved.liked);
+       likeBtn.querySelector("span").textContent=saved.likes;
+       saveState();
+       sendToQualtrics("like",{post:p.id,liked:saved.liked});
+     };
 
-      postData[postId].comments.push(text);
-      renderComments(postId);
-      input.value = "";
-      document.getElementById(`comment-box-${postId}`).style.display = "none";
-      sendToQualtrics("comment", { post: postId, text });
-    }
+     rtBtn.onclick=()=>{
+       saved.retweeted=!saved.retweeted;
+       saved.retweets += saved.retweeted ? 1 : -1;
+       rtBtn.classList.toggle("retweeted",saved.retweeted);
+       rtBtn.querySelector("span").textContent=saved.retweets;
+       saveState();
+       sendToQualtrics("retweet",{post:p.id,retweeted:saved.retweeted});
+     };
 
-    function renderComments(postId) {
-      const section = document.getElementById(`comments-${postId}`);
-      const comments = postData[postId]?.comments || [];
-      section.innerHTML = comments
-        .map(c => `<div class="reply"><strong>You:</strong> ${c}</div>`)
-        .join("");
-      document.getElementById(`comment-count-${postId}`).textContent = comments.length;
-    }
+     commentBtn.onclick=()=>{
+       box.style.display = box.style.display==="none"?"block":"none";
+     };
 
-    function openPost(postId) {
-      window.location.href = `posts/${postId}.html`;
-    }
+     box.querySelector("button").onclick=()=>{
+       const txt=box.querySelector("textarea").value.trim();
+       if(!txt)return;
+       saved.comments.push(txt);
+       comments.innerHTML+=`<div class="reply"><strong>You:</strong> ${txt}</div>`;
+       box.querySelector("textarea").value="";
+       box.style.display="none";
+       commentBtn.querySelector("span").textContent=saved.comments.length;
+       saveState();
+       sendToQualtrics("comment",{post:p.id,text:txt});
+     };
 
-    function sendToQualtrics(type, data) {
-      window.parent.postMessage({ type, data }, "*");
-    }
-  </script>
+     card.append(avatar,c);
+     t.append(card);
+   });
+   saveState();
+ });
+</script>
 </body>
 </html>
