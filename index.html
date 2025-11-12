@@ -9,6 +9,22 @@
   <div id="timeline"></div>
 
   <script>
+    // --- Helper functions for avatar initials & colors ---
+    function getInitials(name) {
+      return name
+        .split(' ')
+        .map(n => n[0].toUpperCase())
+        .slice(0, 2)
+        .join('');
+    }
+
+    function getColor(name) {
+      const colors = ['#1DA1F2', '#17BF63', '#E0245E', '#794BC4', '#FFAD1F', '#F45D22'];
+      const index = name.charCodeAt(0) % colors.length;
+      return colors[index];
+    }
+
+    // --- Load posts from JSON and build the timeline ---
     fetch('data/posts.json')
       .then(res => res.json())
       .then(posts => {
@@ -17,10 +33,15 @@
           const div = document.createElement('div');
           div.className = 'post';
           div.innerHTML = `
-            <img src="${post.avatar}" class="avatar">
+            <div class="avatar" style="background:${getColor(post.author)}">
+              ${getInitials(post.author)}
+            </div>
             <div class="content">
               <p><strong>${post.author}</strong></p>
               <p>${post.text}</p>
+              <div class="actions">
+                ❤️ ${post.likes} 🔁 ${post.retweets} 💬 ${post.comments}
+              </div>
               <button onclick="openPost('${post.id}')">View Conversation</button>
             </div>
           `;
