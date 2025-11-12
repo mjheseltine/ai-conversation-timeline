@@ -24,11 +24,12 @@
       return colors[index];
     }
 
-    // --- Load posts from JSON and build the timeline ---
+    // --- Load posts and render timeline ---
     fetch('data/posts.json')
       .then(res => res.json())
       .then(posts => {
         const timeline = document.getElementById('timeline');
+
         posts.forEach(post => {
           const div = document.createElement('div');
           div.className = 'post';
@@ -39,18 +40,83 @@
             <div class="content">
               <p><strong>${post.author}</strong></p>
               <p>${post.text}</p>
+
               <div class="actions">
-                ❤️ ${post.likes} 🔁 ${post.retweets} 💬 ${post.comments}
+                ❤️ <span id="like-${post.id}">${post.likes}</span> 
+                🔁 <span id="retweet-${post.id}">${post.retweets}</span> 
+                💬 <span id="comment-count-${post.id}">${post.comments}</span>
               </div>
-              <button onclick="openPost('${post.id}')">View Conversation</button>
+
+              <div class="timeline-buttons">
+                <button onclick="likePost('${post.id}')">❤️ Like</button>
+                <button onclick="retweetPost('${post.id}')">🔁 Repost</button>
+                <button onclick="toggleCommentBox('${post.id}')">💬 Comment</button>
+                <button onclick="openPost('${post.id}')">View Conversation</button>
+              </div>
+
+              <div id="comment-box-${post.id}" class="comment-box" style="display:none; margin-top:10px;">
+                <textarea id="comment-input-${post.id}" rows="2" style="width:100%;"></textarea><br>
+                <button onclick="submitComment('${post.id}')">Submit Comment</button>
+              </div>
+
+              <div id="comments-${post.id}" class="comment-section"></div>
             </div>
           `;
           timeline.appendChild(div);
         });
       });
 
+    // --- State tracking ---
+    const postData = {};
+
+    // --- Interactions ---
+    function likePost(postId) {
+      if (!postData[postId]) postData[postId] = { likes: 0, retweets: 0, comments: [] };
+      postData[postId].likes++;
+      document.getElementById(`like-${postId}`).textContent = postData[postId].likes;
+      sendToQualtrics("like", postId);
+    }
+
+    function retweetPost(postId) {
+      if (!postData[postId]) postData[postId] = { likes: 0, retweets: 0, comments: [] };
+      postData[postId].retweets++;
+      document.getElementById(`retweet-${postId}`).textContent = postData[postId].retweets;
+      sendToQualtrics("retweet", postId);
+    }
+
+    function toggleCommentBox(postId) {
+      const box = document.getElementById(`comment-box-${postId}`);
+      box.style.display = box.style.display === "none" ? "block" : "none";
+    }
+
+    function submitComment(postId) {
+      const input = document.getElementById(`comment-input-${postId}`);
+      const text = input.value.trim();
+      if (!text) return;
+      if (!postData[postId]) postData[postId] = { likes: 0, retweets: 0, comments: [] };
+
+      postData[postId].comments.push(text);
+      renderComments(postId);
+      input.value = "";
+      document.getElementById(`comment-box-${postId}`).style.display = "none";
+      sendToQualtrics("comment", { post: postId, text });
+    }
+
+    function renderComments(postId) {
+      const section = document.getElementById(`comments-${postId}`);
+      const comments = postData[postId]?.comments || [];
+      section.innerHTML = comments
+        .map(c => `<div class="reply"><strong>You:</strong> ${c}</div>`)
+        .join("");
+      document.getElementById(`comment-count-${postId}`).textContent = comments.length;
+    }
+
     function openPost(postId) {
       window.location.href = `posts/${postId}.html`;
+    }
+
+    function sendToQualtrics(type, data) {
+      window.parent.postMessage({ type, data }, "*");
     }
   </script>
 </body>
