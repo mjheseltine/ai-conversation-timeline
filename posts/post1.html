@@ -79,6 +79,20 @@ body { background: var(--bg); margin: 20px; color: #111; }
   border-radius: 20px; text-decoration: none; font-weight: bold;
 }
 #backBtn:hover { background: #d8e2e7; }
+
+.thumb {
+  width: 100%;
+  border-radius: 10px;
+  margin-top: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  transition: transform .2s ease, box-shadow .2s ease;
+  object-fit: cover;
+}
+.thumb:hover {
+  transform: scale(1.015);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
 </style>
 </head>
 
