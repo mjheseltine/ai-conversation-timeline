@@ -16,102 +16,175 @@
   font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto;
 }
 
-body { background: var(--bg); margin:20px; }
-.container { max-width:800px; margin:auto; }
+body {
+  background: var(--bg);
+  margin: 20px;
+}
+.container {
+  max-width: 800px;
+  margin: auto;
+}
 
-.post, .reply-box {
+.post {
   background: var(--card);
   border-radius: var(--radius);
   padding: 14px;
   box-shadow: var(--shadow);
-  display:flex;
-  gap:12px;
-  margin-bottom:16px;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .avatar {
-  width:48px; height:48px; border-radius:50%;
-  display:grid; place-items:center;
-  color:#fff; font-weight:700;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 700;
 }
 
-.content { flex:1; }
-.name { font-weight:700; }
-.text { margin-top:6px; }
+.content {
+  flex: 1;
+}
+.meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.name {
+  font-weight: 700;
+  margin-right: 4px;
+}
+.handle {
+  color: var(--muted);
+}
+
+.text {
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.45;
+}
 
 .thumb {
-  width:100%;
-  border-radius:10px;
-  margin-top:10px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.05);
+  width: 100%;
+  border-radius: 10px;
+  margin-top: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  object-fit: cover;
 }
 
 .actions {
-  margin-top:10px;
-  display:flex;
-  gap:20px;
-  font-size:14px;
-  color:var(--muted);
+  margin-top: 12px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  color: var(--muted);
 }
 .actions button {
-  background:none; border:none;
-  padding:4px 6px;
-  border-radius:6px;
-  cursor:pointer;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
 }
-.actions button.liked { color:#e0245e; }
-.actions button.retweeted { color:#17bf63; }
+.actions button:hover {
+  background: #f1f5f9;
+}
+.liked {
+  color: #e0245e;
+}
+.retweeted {
+  color: #17bf63;
+}
 
+.comment-box {
+  margin-top: 12px;
+}
 .comment-box textarea {
-  width:100%;
-  border-radius:8px;
-  border:1px solid #ccc;
-  padding:8px;
+  width: 100%;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 14px;
+}
+.comment-box button {
+  margin-top: 6px;
+  background: var(--accent);
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
 }
 
+.comment-section {
+  margin-top: 10px;
+}
 .reply {
-  background:#f0f2f5;
-  padding:6px 10px;
-  border-radius:8px;
-  margin-top:6px;
+  background: #f0f2f5;
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-top: 6px;
 }
 
 .ai-summary {
-  background:#fffdf8;
-  border:1px solid #fbe5b3;
-  padding:12px;
-  border-radius:10px;
-  box-shadow:var(--shadow);
-  display:flex;
-  gap:10px;
-  margin-bottom:16px;
+  background: #fffdf8;
+  border: 1px solid #fbe5b3;
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 .ai-summary .avatar {
-  background:linear-gradient(135deg,#6366f1,#8b5cf6);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  font-size: 20px;
 }
 
 #backBtn {
-  display:block;
-  margin:20px auto;
-  padding:10px 18px;
-  background:#e6ecf0;
-  border-radius:20px;
-  text-decoration:none;
-  color:#333;
-  font-weight:bold;
+  display: block;
+  width: fit-content;
+  margin: 20px auto;
+  padding: 10px 18px;
+  background: #e6ecf0;
+  color: #333;
+  border-radius: 20px;
+  font-weight: 600;
+  text-decoration: none;
+}
+#backBtn:hover {
+  background: #d8e2e7;
+}
+
+.highlight-mention {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+.highlight-hashtag {
+  color: #059669;
+  font-weight: 600;
 }
 </style>
 
 </head>
 <body>
 
-<div class="container" id="thread"></div>
-<a id="backBtn" href="../index.html">⬅ Back to Timeline</a>
+<div class="container">
+  <div id="thread"></div>
+  <a id="backBtn" href="../index.html">⬅ Back to Timeline</a>
+</div>
 
 <script>
-// Helpers
-function initials(n){ return n.split(/\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase(); }
-function colorFromName(name){
+// -------- HELPERS --------
+function initials(name) {
+  return name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function colorFromName(name) {
   const colors = [
     "linear-gradient(135deg,#1f6feb,#3b82f6)",
     "linear-gradient(135deg,#10b981,#34d399)",
@@ -122,61 +195,109 @@ function colorFromName(name){
   return colors[name.charCodeAt(0) % colors.length];
 }
 
-// Read post ID from URL
+function highlight(text) {
+  return text
+    .replace(/(@[a-zA-Z0-9_]+)/g, '<span class="highlight-mention">$1</span>')
+    .replace(/(#[a-zA-Z0-9_]+)/g, '<span class="highlight-hashtag">$1</span>');
+}
+
+// -------- LOAD POST ID --------
 const postId = new URLSearchParams(location.search).get("id");
 
-// Load state
-let timelineState = JSON.parse(sessionStorage.getItem("timelineState") || "{}");
-let state = timelineState[postId] || {likes:0, retweets:0, comments:[], liked:false, retweeted:false};
+// -------- LOAD STATE --------
+let timelineState = JSON.parse(
+  sessionStorage.getItem("timelineState") || "{}"
+);
+
+let state = timelineState[postId] || {
+  likes: 0,
+  retweets: 0,
+  comments: [],
+  liked: false,
+  retweeted: false
+};
 
 function save() {
   timelineState[postId] = state;
   sessionStorage.setItem("timelineState", JSON.stringify(timelineState));
 }
 
+// -------- RENDER --------
 const thread = document.getElementById("thread");
 
-// Load post data dynamically
 fetch("../data/posts.json")
   .then(r => r.json())
   .then(posts => {
     const post = posts.find(p => p.id === postId);
-    renderPost(post);
+
+    if (!state.initialized) {
+      state.likes = post.likes || 0;
+      state.retweets = post.retweets || 0;
+      state.initialized = true;
+      save();
+    }
+
+    renderMainPost(post);
     renderAISummary(post);
     post.replies.forEach(renderReply);
     renderUserComments();
   });
 
-function renderPost(p){
+// ---- MAIN POST ----
+function renderMainPost(p) {
   const wrapper = document.createElement("div");
   wrapper.className = "post";
 
   wrapper.innerHTML = `
-    <div class="avatar" style="background:${colorFromName(p.author)}">${initials(p.author)}</div>
+    <div class="avatar" style="background:${colorFromName(p.author)}">
+      ${initials(p.author)}
+    </div>
+
     <div class="content">
-      <div class="name">${p.author}</div>
-      <div class="text">${p.text}</div>
-      ${p.image ? `<img src="../${p.image}" class="thumb">` : ""}
-      <div class="actions">
-        <button class="like ${state.liked?"liked":""}">❤️ <span>${state.likes}</span></button>
-        <button class="retweet ${state.retweeted?"retweeted":""}">🔁 <span>${state.retweets}</span></button>
-        <button class="comment">💬 <span>${state.comments.length}</span></button>
+      <div class="meta">
+        <span class="name">${p.author}</span>
+        <span class="handle">${p.handle}</span> ·
+        <span class="time">${p.timestamp}</span>
       </div>
+
+      <div class="text">${highlight(p.text)}</div>
+
+      ${
+        p.image
+          ? `<img src="../${p.image}" class="thumb" alt="image">`
+          : ""
+      }
+
+      <div class="actions">
+        <button class="like ${state.liked ? "liked" : ""}">
+          ❤️ <span>${state.likes}</span>
+        </button>
+
+        <button class="retweet ${state.retweeted ? "retweeted" : ""}">
+          🔁 <span>${state.retweets}</span>
+        </button>
+
+        <button class="comment">
+          💬 <span>${state.comments.length}</span>
+        </button>
+      </div>
+
       <div class="comment-box" style="display:none;">
         <textarea placeholder="Write a comment..."></textarea>
-        <button style="margin-top:6px;background:var(--accent);color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;">Submit</button>
+        <button>Submit</button>
       </div>
+
       <div class="comment-section"></div>
     </div>
   `;
 
   thread.appendChild(wrapper);
 
-  const likeBtn  = wrapper.querySelector(".like");
-  const rtBtn    = wrapper.querySelector(".retweet");
+  const likeBtn = wrapper.querySelector(".like");
+  const rtBtn = wrapper.querySelector(".retweet");
   const commentBtn = wrapper.querySelector(".comment");
   const commentBox = wrapper.querySelector(".comment-box");
-  const submit   = wrapper.querySelector(".comment-box button");
+  const submitBtn = wrapper.querySelector(".comment-box button");
   const textarea = wrapper.querySelector("textarea");
 
   likeBtn.onclick = () => {
@@ -196,10 +317,11 @@ function renderPost(p){
   };
 
   commentBtn.onclick = () => {
-    commentBox.style.display = commentBox.style.display === "none" ? "block" : "none";
+    commentBox.style.display =
+      commentBox.style.display === "none" ? "block" : "none";
   };
 
-  submit.onclick = () => {
+  submitBtn.onclick = () => {
     const txt = textarea.value.trim();
     if (!txt) return;
     state.comments.push(txt);
@@ -211,9 +333,11 @@ function renderPost(p){
   };
 }
 
-function renderAISummary(p){
+// ---- AI SUMMARY ----
+function renderAISummary(p) {
   const box = document.createElement("div");
   box.className = "ai-summary";
+
   box.innerHTML = `
     <div class="avatar">🤖</div>
     <div class="content">
@@ -221,27 +345,36 @@ function renderAISummary(p){
       <div class="text">${p.aiSummary}</div>
     </div>
   `;
+
   thread.appendChild(box);
 }
 
-function renderReply(r){
+// ---- REPLIES ----
+function renderReply(r) {
   const wrapper = document.createElement("div");
   wrapper.className = "post";
+
   wrapper.innerHTML = `
-    <div class="avatar" style="background:${colorFromName(r.author)}">${initials(r.author)}</div>
+    <div class="avatar" style="background:${colorFromName(r.author)}">
+      ${initials(r.author)}
+    </div>
+
     <div class="content">
       <div class="name">${r.author}</div>
-      <div class="text">${r.text}</div>
+      <div class="text">${highlight(r.text)}</div>
     </div>
   `;
+
   thread.appendChild(wrapper);
 }
 
-function renderUserComments(){
-  const section = thread.querySelector(".comment-section");
+// ---- USER COMMENTS ----
+function renderUserComments() {
+  const section = document.querySelector(".comment-section");
   if (!section) return;
+
   section.innerHTML = state.comments
-    .map(c => `<div class="reply"><strong>You:</strong> ${c}</div>`)
+    .map(c => `<div class="reply"><strong>You:</strong> ${highlight(c)}</div>`)
     .join("");
 }
 </script>
