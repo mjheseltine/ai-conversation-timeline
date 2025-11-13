@@ -92,8 +92,6 @@ body { background: var(--bg); margin: 20px; color: #111; }
   transform: scale(1.015);
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
-
-  
 </style>
 </head>
 
@@ -103,17 +101,18 @@ body { background: var(--bg); margin: 20px; color: #111; }
 
 <script>
 // ---------- Configuration ----------
-const postId = "post1";  // Change per file
+const postId = "post2"; 
 const mainPost = {
   author: "User123",
   text: "Post claims Trump's policies hurt manufacturing while favoring Big Tech...",
-  image: "../images/post2_thumb.jpg"  // <-- ADD THIS
+  image: "../images/post2_thumb.jpg"   // correct path
 };
 
 const aiSummary = {
   author: "AI Summary 🤖",
   text: "Post criticizes Trump's manufacturing record while noting tech favoritism."
 };
+
 const replies = [
   { author: "PolicyNerd", text: "Both parties contributed to tech monopolies though." },
   { author: "EconGuy", text: "Reshoring takes time; this criticism oversimplifies things." },
@@ -133,17 +132,14 @@ function colorFromName(name){
   const i = name.charCodeAt(0) % colors.length;
   return colors[i];
 }
-function sendToQualtrics(type,data){window.parent.postMessage({type,data},"*");}
 
-// ---------- Shared session state ----------
+// ------ Session state ------
 let timelineState = JSON.parse(sessionStorage.getItem("timelineState") || "{}");
 let state = timelineState[postId] || {likes:0, retweets:0, comments:[], liked:false, retweeted:false};
-
 function save(){
   timelineState[postId] = state;
   sessionStorage.setItem("timelineState", JSON.stringify(timelineState));
 }
-
 
 // ---------- Render ----------
 const convo = document.getElementById("conversation");
@@ -158,20 +154,27 @@ convo.appendChild(createAISummary(aiSummary));
 // Replies
 replies.forEach(r => convo.appendChild(createPost(r,false)));
 
-// User comments (if any)
+// Existing user comments
 renderUserComments();
 
-// ---------- Post creation ----------
+// ---------- Functions ----------
 function createPost(data,isMain){
   const wrapper = document.createElement("article");
   wrapper.className = "post";
+
   const avatar = document.createElement("div");
   avatar.className = "avatar";
   avatar.style.background = colorFromName(data.author);
   avatar.textContent = initials(data.author);
+
   const content = document.createElement("div");
   content.className = "content";
-  content.innerHTML = `<div class="name">${data.author}</div><div class="text">${data.text}</div>`;
+
+  content.innerHTML = `
+    <div class="name">${data.author}</div>
+    <div class="text">${data.text}</div>
+    ${data.image ? `<img src="${data.image}" alt="" class="thumb">` : ""}
+  `;
 
   if(isMain){
     const actions = document.createElement("div");
@@ -181,20 +184,22 @@ function createPost(data,isMain){
       <button class="retweet ${state.retweeted?"retweeted":""}">🔁 <span>${state.retweets}</span></button>
       <button class="comment">💬 <span>${state.comments.length}</span></button>
     `;
+    content.append(actions);
+
     const commentBox = document.createElement("div");
     commentBox.className = "comment-box";
-    commentBox.style.display = "none";
+    commentBox.style.display="none";
     commentBox.innerHTML = `
       <textarea rows="2" placeholder="Write a comment..."></textarea>
       <button style="margin-top:6px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;">Submit</button>
     `;
+    content.append(commentBox);
+
     const commentSection = document.createElement("div");
     commentSection.className = "comment-section";
+    content.append(commentSection);
 
-    content.append(actions,commentBox,commentSection);
-
-    // Buttons
-    const [likeBtn,rtBtn,commentBtn] = actions.querySelectorAll("button");
+    const [likeBtn, rtBtn, commentBtn] = actions.querySelectorAll("button");
     const submitBtn = commentBox.querySelector("button");
     const textarea = commentBox.querySelector("textarea");
 
@@ -204,7 +209,6 @@ function createPost(data,isMain){
       likeBtn.classList.toggle("liked",state.liked);
       likeBtn.querySelector("span").textContent = state.likes;
       save();
-      sendToQualtrics("like",{post:postId,liked:state.liked});
     };
 
     rtBtn.onclick = () => {
@@ -213,7 +217,6 @@ function createPost(data,isMain){
       rtBtn.classList.toggle("retweeted",state.retweeted);
       rtBtn.querySelector("span").textContent = state.retweets;
       save();
-      sendToQualtrics("retweet",{post:postId,retweeted:state.retweeted});
     };
 
     commentBtn.onclick = () => {
@@ -229,7 +232,6 @@ function createPost(data,isMain){
       commentBtn.querySelector("span").textContent = state.comments.length;
       save();
       renderUserComments();
-      sendToQualtrics("comment",{post:postId,text:txt});
     };
   }
 
@@ -237,7 +239,6 @@ function createPost(data,isMain){
   return wrapper;
 }
 
-// ---------- AI Summary creation ----------
 function createAISummary(ai){
   const el=document.createElement("div");
   el.className="ai-summary";
@@ -250,11 +251,9 @@ function createAISummary(ai){
   return el;
 }
 
-// ---------- Render user comments ----------
 function renderUserComments(){
-  const main = convo.querySelector(".post"); // first post
+  const main = convo.querySelector(".post");
   const commentSection = main.querySelector(".comment-section");
-  if(!commentSection) return;
   commentSection.innerHTML = state.comments.map(c=>`<div class="reply"><strong>You:</strong> ${c}</div>`).join("");
 }
 </script>
