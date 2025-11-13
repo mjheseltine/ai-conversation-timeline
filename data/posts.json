@@ -4,8 +4,11 @@
     "author": "NewsWire",
     "handle": "@newswire",
     "text": "President Donald Trump signed a government funding bill, ending a record 43-day shutdown — the longest in nation's history — hours after the House passed the measure on a mostly party-line vote of 222-209.",
+    "likes": 128,
+    "retweets": 34,
+    "timestamp": "4h",
     "image": "images/post1_thumb.jpg",
-    "aiSummary": "Post highlights Trump ending the record shutdown while critics argue he prolonged the crisis only to accept the same deal available at the start.",
+    "aiSummary": "Post highlights Trump ending the record shutdown after weeks of standoff, prompting critics to argue the eventual deal was available from the start.",
     "replies": [
       {
         "author": "CivicsNerd",
@@ -30,8 +33,11 @@
     "author": "PoliticsDaily",
     "handle": "@pol_daily",
     "text": "Emails from Jeffrey Epstein released by Democrats say President Trump \"knew about the girls\" and spent time with a victim.",
+    "likes": 92,
+    "retweets": 18,
+    "timestamp": "2h",
     "image": "images/post2_thumb.jpg",
-    "aiSummary": "Post reports on Epstein emails accusing Trump, with reactions split between dismissing the claims as partisan and insisting the GOP fears broader fallout.",
+    "aiSummary": "Post reports on Epstein emails implicating Trump, with reactions split between dismissing the claims as partisan attacks and insisting Republicans fear political fallout.",
     "replies": [
       {
         "author": "TruthGuard",
@@ -56,8 +62,11 @@
     "author": "USPolitics",
     "handle": "@uspolitics",
     "text": "John F. Kennedy’s grandson Jack Schlossberg is making a run for the U.S. House next year.",
+    "likes": 201,
+    "retweets": 51,
+    "timestamp": "1d",
     "image": "images/post3_thumb.jpg",
-    "aiSummary": "Post notes JFK’s grandson entering a House race, prompting mixed views on the Kennedy legacy and speculation about his chances in a crowded New York district.",
+    "aiSummary": "Post notes JFK’s grandson entering a House race, prompting mixed reactions about the Kennedy legacy and his chances in a crowded Manhattan district.",
     "replies": [
       {
         "author": "RFKStan",
