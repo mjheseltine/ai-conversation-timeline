@@ -232,11 +232,13 @@ function createPost(p) {
     saveState();
   };
 
-  commentBtn.onclick = () => {
-    commentBox.style.display =
-      commentBox.style.display === "none" ? "block" : "none";
-    ta.focus();
-  };
+commentBtn.onclick = (e) => {
+  e.stopPropagation(); // ⛔ prevent parent click handlers
+  commentBox.style.display =
+    commentBox.style.display === "none" ? "block" : "none";
+  ta.focus();
+};
+
 
   postBtn.onclick = () => {
     const txt = ta.value.trim();
