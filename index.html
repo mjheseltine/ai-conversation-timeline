@@ -5,28 +5,199 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Timeline</title>
 
-<link rel="stylesheet" href="assets/styles.css">
+<style>
+:root {
+  --bg: #f6f7fb;
+  --card: #fff;
+  --muted: #6b7280;
+  --accent: #1f6feb;
+  --radius: 12px;
+  --shadow: 0 4px 12px rgba(35, 40, 50, 0.08);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto;
+}
 
+body {
+  background: var(--bg);
+  margin: 20px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+  max-width: 1100px;
+  margin: auto;
+}
+
+.container {
+  max-width: 800px;
+}
+
+.post {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 12px;
+  box-shadow: var(--shadow);
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #fff;
+}
+
+.content {
+  flex: 1;
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.name {
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.text {
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.thumb {
+  width: 100%;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 20px;
+  color: var(--muted);
+}
+
+.actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.actions button:hover {
+  background: #f1f5f9;
+}
+
+.liked { color: #e0245e; }
+.retweeted { color: #17bf63; }
+
+.comment-box {
+  margin-top: 10px;
+  display: none;
+}
+
+.comment-box textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 8px;
+  font-size: 14px;
+}
+
+.comment-box button {
+  margin-top: 6px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.view-link {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sidebar {
+  position: sticky;
+  top: 20px;
+}
+
+.widget {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.widget h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.search-widget input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+
+#trendingList li {
+  list-style: none;
+  padding: 6px 0;
+  font-weight: 600;
+  color: #1f6feb;
+  cursor: pointer;
+}
+
+#trendingList li:hover {
+  text-decoration: underline;
+}
+</style>
 </head>
+
 <body>
 
-<div class="container">
-  <div id="timeline"></div>
+<div class="layout">
+  <main class="container" id="timeline"></main>
+
+  <aside class="sidebar">
+    <div class="widget search-widget">
+      <input id="searchInput" placeholder="Search posts">
+    </div>
+
+    <div class="widget">
+      <h3>Trending</h3>
+      <ul id="trendingList"></ul>
+    </div>
+
+    <div class="widget">
+      <h3>Local Weather</h3>
+      <div id="weather">Loading…</div>
+    </div>
+  </aside>
 </div>
 
 <script>
-/* ===============================
-   QUALTRICS EVENT EMITTER
-================================ */
-function sendToQualtrics(type, data = {}) {
-  window.parent.postMessage({ type, ...data }, "*");
-}
-
-/* ===============================
-   HELPERS
-================================ */
+// -------- Helpers --------
 function initials(name) {
-  return name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  return name.split(/\s+/).map(w => w[0]).join("").slice(0,2).toUpperCase();
 }
 
 function colorFromName(name) {
@@ -40,51 +211,32 @@ function colorFromName(name) {
   return colors[name.charCodeAt(0) % colors.length];
 }
 
-function highlight(text) {
-  return text
-    .replace(/(@[a-zA-Z0-9_]+)/g, '<span class="highlight-mention">$1</span>')
-    .replace(/(#[a-zA-Z0-9_]+)/g, '<span class="highlight-hashtag">$1</span>');
-}
-
-/* ===============================
-   STATE
-================================ */
+// -------- State --------
 let timelineState = JSON.parse(sessionStorage.getItem("timelineState") || "{}");
 
-function saveState() {
+function save() {
   sessionStorage.setItem("timelineState", JSON.stringify(timelineState));
 }
 
-/* ===============================
-   LOAD POSTS
-================================ */
 const timeline = document.getElementById("timeline");
+let allPosts = [];
 
+// -------- Load Posts --------
 fetch("data/posts.json")
   .then(r => r.json())
   .then(posts => {
-    posts.forEach(post => timeline.appendChild(createPost(post)));
+    allPosts = posts;
+    renderTimeline(posts);
   });
 
-/* ===============================
-   INTERSECTION OBSERVER (VIEWS)
-================================ */
-const viewObserver = new IntersectionObserver(entries => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      const postId = entry.target.dataset.postId;
-      sendToQualtrics("POST_VIEW", { postId });
-      viewObserver.unobserve(entry.target);
-    }
-  });
-}, { threshold: 0.6 });
+function renderTimeline(posts) {
+  timeline.innerHTML = "";
+  posts.forEach(p => timeline.appendChild(createPost(p)));
+}
 
-/* ===============================
-   CREATE POST
-================================ */
+// -------- Create Post --------
 function createPost(data) {
-
-  let state = timelineState[data.id] || {
+  const state = timelineState[data.id] ||= {
     likes: data.likes || 0,
     retweets: data.retweets || 0,
     comments: [],
@@ -94,9 +246,6 @@ function createPost(data) {
 
   const wrapper = document.createElement("article");
   wrapper.className = "post";
-  wrapper.dataset.postId = data.id;
-
-  viewObserver.observe(wrapper);
 
   const avatar = document.createElement("div");
   avatar.className = "avatar";
@@ -109,34 +258,20 @@ function createPost(data) {
   c.innerHTML = `
     <div class="meta">
       <span class="name">${data.author}</span>
-      <span class="handle">${data.handle}</span> · 
-      <span class="time">${data.timestamp}</span>
+      ${data.handle} · ${data.timestamp}
     </div>
-
-    <div class="text">${highlight(data.text)}</div>
-
+    <div class="text">${data.text}</div>
     ${data.image ? `<img src="${data.image}" class="thumb">` : ""}
-
     <div class="actions">
-      <button class="like ${state.liked ? "liked" : ""}">
-        ❤️ <span>${state.likes}</span>
-      </button>
-      <button class="retweet ${state.retweeted ? "retweeted" : ""}">
-        🔁 <span>${state.retweets}</span>
-      </button>
-      <button class="comment">
-        💬 <span>${state.comments.length}</span>
-      </button>
+      <button class="like ${state.liked ? "liked" : ""}">❤️ <span>${state.likes}</span></button>
+      <button class="retweet ${state.retweeted ? "retweeted" : ""}">🔁 <span>${state.retweets}</span></button>
+      <button class="comment">💬 <span>${data.replies.length + state.comments.length}</span></button>
     </div>
-
-    <div class="comment-box" style="display:none;">
+    <div class="comment-box">
       <textarea placeholder="Write a comment..."></textarea>
-      <button>Submit</button>
+      <button>Reply</button>
     </div>
-
-    <a class="view-link" href="posts/post.html?id=${data.id}">
-      View Conversation →
-    </a>
+    <a class="view-link" href="posts/post.html?id=${data.id}">View conversation →</a>
   `;
 
   wrapper.append(avatar, c);
@@ -145,106 +280,94 @@ function createPost(data) {
   const rtBtn = c.querySelector(".retweet");
   const commentBtn = c.querySelector(".comment");
   const commentBox = c.querySelector(".comment-box");
-  const submitBtn = commentBox.querySelector("button");
-  const ta = commentBox.querySelector("textarea");
-  const viewLink = c.querySelector(".view-link");
+  const ta = c.querySelector("textarea");
+  const submit = c.querySelector(".comment-box button");
 
-  /* --- Like --- */
-  likeBtn.onclick = () => {
+  likeBtn.onclick = e => {
+    e.stopPropagation();
     state.liked = !state.liked;
     state.likes += state.liked ? 1 : -1;
     likeBtn.classList.toggle("liked", state.liked);
     likeBtn.querySelector("span").textContent = state.likes;
-
-    sendToQualtrics("USER_LIKE", {
-      postId: data.id,
-      count: state.likes
-    });
-
-    timelineState[data.id] = state;
-    saveState();
+    save();
   };
 
-  /* --- Retweet --- */
-  rtBtn.onclick = () => {
+  rtBtn.onclick = e => {
+    e.stopPropagation();
     state.retweeted = !state.retweeted;
     state.retweets += state.retweeted ? 1 : -1;
     rtBtn.classList.toggle("retweeted", state.retweeted);
     rtBtn.querySelector("span").textContent = state.retweets;
-
-    sendToQualtrics("USER_RETWEET", {
-      postId: data.id,
-      count: state.retweets
-    });
-
-    timelineState[data.id] = state;
-    saveState();
+    save();
   };
 
-  /* --- Comment box toggle --- */
-  commentBtn.onclick = () => {
-    commentBox.style.display = "block";
+  commentBtn.onclick = e => {
+    e.stopPropagation();
+    commentBox.style.display =
+      commentBox.style.display === "block" ? "none" : "block";
     ta.focus();
-
-    sendToQualtrics("COMMENT_BOX_OPEN", {
-      postId: data.id
-    });
   };
 
-  /* --- Comment submit --- */
-  submitBtn.onclick = () => {
+  submit.onclick = e => {
+    e.stopPropagation();
     const txt = ta.value.trim();
     if (!txt) return;
-
     state.comments.push(txt);
     ta.value = "";
     commentBox.style.display = "none";
-
-    commentBtn.querySelector("span").textContent = state.comments.length;
-
-    sendToQualtrics("USER_COMMENT", {
-      postId: data.id,
-      text: txt
-    });
-
-    timelineState[data.id] = state;
-    saveState();
-  };
-
-  /* --- Open conversation --- */
-  viewLink.onclick = () => {
-    sendToQualtrics("POST_OPEN", { postId: data.id });
+    commentBtn.querySelector("span").textContent =
+      data.replies.length + state.comments.length;
+    save();
   };
 
   return wrapper;
 }
 
-/* ===============================
-   SCROLL DEPTH
-================================ */
-let maxScroll = 0;
-
-window.addEventListener("scroll", () => {
-  const docHeight =
-    document.documentElement.scrollHeight - window.innerHeight;
-  const depth = Math.round((window.scrollY / docHeight) * 100);
-
-  if (depth > maxScroll) {
-    maxScroll = depth;
-    sendToQualtrics("SCROLL_DEPTH", { depth });
-  }
+// -------- Search --------
+document.getElementById("searchInput").addEventListener("input", e => {
+  const q = e.target.value.toLowerCase();
+  renderTimeline(
+    allPosts.filter(p =>
+      p.text.toLowerCase().includes(q) ||
+      p.author.toLowerCase().includes(q)
+    )
+  );
 });
 
-/* ===============================
-   TIME ON PAGE
-================================ */
-const pageStart = Date.now();
+// -------- Trending --------
+const trending = [
+  "#GovernmentShutdown",
+  "#Trump",
+  "#BreakingNews",
+  "#AI",
+  "#MediaBias",
+  "#Congress"
+];
 
-window.addEventListener("beforeunload", () => {
-  sendToQualtrics("TIME_ON_PAGE", {
-    ms: Date.now() - pageStart
+const tList = document.getElementById("trendingList");
+trending.forEach(tag => {
+  const li = document.createElement("li");
+  li.textContent = tag;
+  li.onclick = () => {
+    searchInput.value = tag;
+    searchInput.dispatchEvent(new Event("input"));
+  };
+  tList.appendChild(li);
+});
+
+// -------- Weather --------
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude, longitude } = pos.coords;
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`)
+      .then(r => r.json())
+      .then(d => {
+        document.getElementById("weather").innerHTML =
+          `<strong>${Math.round(d.current_weather.temperature)}°C</strong><br>
+           Wind ${d.current_weather.windspeed} km/h`;
+      });
   });
-});
+}
 </script>
 
 </body>
