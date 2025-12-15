@@ -5,151 +5,29 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Conversation</title>
 
-<style>
-:root {
-  --bg:#f6f7fb;
-  --card:#fff;
-  --muted:#6b7280;
-  --accent:#1f6feb;
-  --radius:12px;
-  --shadow:0 4px 12px rgba(35,40,50,0.08);
-  font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto;
-}
+<link rel="stylesheet" href="../assets/styles.css">
 
-body { background:var(--bg); margin:20px; }
-
-.container { max-width:800px; margin:auto; }
-
-.post {
-  background:var(--card);
-  border-radius:var(--radius);
-  padding:14px;
-  box-shadow:var(--shadow);
-  display:flex;
-  gap:12px;
-  margin-bottom:16px;
-}
-
-.avatar {
-  width:48px;
-  height:48px;
-  border-radius:50%;
-  display:grid;
-  place-items:center;
-  color:#fff;
-  font-weight:700;
-}
-
-.content { flex:1; }
-
-.meta {
-  font-size:13px;
-  color:var(--muted);
-}
-
-.name {
-  font-weight:700;
-  margin-right:6px;
-}
-
-.text {
-  margin-top:6px;
-  font-size:15px;
-  line-height:1.45;
-}
-
-.thumb {
-  width:100%;
-  border-radius:10px;
-  margin-top:10px;
-}
-
-.actions {
-  margin-top:12px;
-  display:flex;
-  gap:20px;
-  color:var(--muted);
-}
-
-.actions button {
-  background:none;
-  border:none;
-  cursor:pointer;
-  padding:4px 6px;
-  border-radius:6px;
-}
-
-.actions button:hover { background:#f1f5f9; }
-
-.liked { color:#e0245e; }
-.retweeted { color:#17bf63; }
-
-/* AI SUMMARY */
-.ai-summary {
-  background:#fffdf8;
-  border:1px solid #fbe5b3;
-}
-
-/* USER COMMENT HIGHLIGHT */
-.user-comment {
-  background:#f0f7ff;
-  border:1px solid #dbeafe;
-}
-
-.comment-box {
-  margin-top:14px;
-}
-
-.comment-box textarea {
-  width:100%;
-  min-height:80px;
-  border-radius:8px;
-  border:1px solid #d1d5db;
-  padding:8px;
-  font-size:14px;
-}
-
-.comment-box button {
-  margin-top:6px;
-  background:var(--accent);
-  color:white;
-  border:none;
-  padding:7px 14px;
-  border-radius:8px;
-  font-weight:600;
-  cursor:pointer;
-}
-
-#backBtn {
-  display:block;
-  margin:24px auto;
-  padding:10px 18px;
-  background:#e6ecf0;
-  border-radius:20px;
-  text-decoration:none;
-  color:#333;
-  font-weight:600;
-}
-</style>
 </head>
-
 <body>
 
 <div class="container">
   <div id="thread"></div>
-
-  <div class="comment-box">
-    <textarea id="userReply" placeholder="Write a reply..."></textarea>
-    <button id="postReply">Reply</button>
-  </div>
-
   <a id="backBtn" href="../index.html">⬅ Back to Timeline</a>
 </div>
 
 <script>
-// -------- Helpers --------
+/* ===============================
+   QUALTRICS EVENT EMITTER
+================================ */
+function sendToQualtrics(type, data = {}) {
+  window.parent.postMessage({ type, ...data }, "*");
+}
+
+/* ===============================
+   HELPERS
+================================ */
 function initials(name) {
-  return name.split(/\s+/).map(w => w[0]).join("").slice(0,2).toUpperCase();
+  return name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
 function colorFromName(name) {
@@ -163,27 +41,38 @@ function colorFromName(name) {
   return colors[name.charCodeAt(0) % colors.length];
 }
 
-// -------- Load ID + State --------
+function highlight(text) {
+  return text
+    .replace(/(@[a-zA-Z0-9_]+)/g, '<span class="highlight-mention">$1</span>')
+    .replace(/(#[a-zA-Z0-9_]+)/g, '<span class="highlight-hashtag">$1</span>');
+}
+
+/* ===============================
+   LOAD STATE
+================================ */
 const postId = new URLSearchParams(location.search).get("id");
 
 let timelineState = JSON.parse(sessionStorage.getItem("timelineState") || "{}");
 
-const state = timelineState[postId] ||= {
-  likes:0,
-  retweets:0,
-  comments:[],
-  liked:false,
-  retweeted:false
+let state = timelineState[postId] || {
+  likes: 0,
+  retweets: 0,
+  comments: [],
+  liked: false,
+  retweeted: false,
+  initialized: false
 };
 
-function save() {
+function saveState() {
   timelineState[postId] = state;
   sessionStorage.setItem("timelineState", JSON.stringify(timelineState));
 }
 
+/* ===============================
+   LOAD POST DATA
+================================ */
 const thread = document.getElementById("thread");
 
-// -------- Load Post --------
 fetch("../data/posts.json")
   .then(r => r.json())
   .then(posts => {
@@ -192,63 +81,125 @@ fetch("../data/posts.json")
     if (!state.initialized) {
       state.likes = post.likes || 0;
       state.retweets = post.retweets || 0;
+      state.comments = state.comments || [];
       state.initialized = true;
-      save();
+      saveState();
     }
+
+    sendToQualtrics("POST_OPEN", { postId });
 
     renderMainPost(post);
     renderAISummary(post);
-    post.replies.forEach(r => renderReply(r));
+    post.replies.forEach(renderReply);
     renderUserComments();
   });
 
-// -------- Render Main --------
+/* ===============================
+   MAIN POST
+================================ */
 function renderMainPost(p) {
-  const el = document.createElement("article");
-  el.className = "post";
+  const wrapper = document.createElement("article");
+  wrapper.className = "post";
 
-  el.innerHTML = `
+  wrapper.innerHTML = `
     <div class="avatar" style="background:${colorFromName(p.author)}">
       ${initials(p.author)}
     </div>
+
     <div class="content">
       <div class="meta">
         <span class="name">${p.author}</span>
-        ${p.handle} · ${p.timestamp}
+        <span class="handle">${p.handle}</span> ·
+        <span class="time">${p.timestamp}</span>
       </div>
-      <div class="text">${p.text}</div>
+
+      <div class="text">${highlight(p.text)}</div>
+
       ${p.image ? `<img src="../${p.image}" class="thumb">` : ""}
+
       <div class="actions">
-        <button class="like ${state.liked ? "liked":""}">❤️ <span>${state.likes}</span></button>
-        <button class="retweet ${state.retweeted ? "retweeted":""}">🔁 <span>${state.retweets}</span></button>
-        <button class="comment">💬 <span>${p.replies.length + state.comments.length}</span></button>
+        <button class="like ${state.liked ? "liked" : ""}">
+          ❤️ <span>${state.likes}</span>
+        </button>
+
+        <button class="retweet ${state.retweeted ? "retweeted" : ""}">
+          🔁 <span>${state.retweets}</span>
+        </button>
+
+        <button class="comment">
+          💬 <span>${p.replies.length + state.comments.length}</span>
+        </button>
+      </div>
+
+      <div class="comment-box" style="display:none;">
+        <textarea placeholder="Write a reply..."></textarea>
+        <button>Submit</button>
       </div>
     </div>
   `;
 
-  thread.appendChild(el);
+  thread.appendChild(wrapper);
 
-  el.querySelector(".like").onclick = () => {
+  const likeBtn = wrapper.querySelector(".like");
+  const rtBtn = wrapper.querySelector(".retweet");
+  const commentBtn = wrapper.querySelector(".comment");
+  const commentBox = wrapper.querySelector(".comment-box");
+  const submitBtn = commentBox.querySelector("button");
+  const ta = commentBox.querySelector("textarea");
+
+  likeBtn.onclick = () => {
     state.liked = !state.liked;
     state.likes += state.liked ? 1 : -1;
-    el.querySelector(".like span").textContent = state.likes;
-    save();
+    likeBtn.classList.toggle("liked", state.liked);
+    likeBtn.querySelector("span").textContent = state.likes;
+
+    sendToQualtrics("USER_LIKE", { postId, count: state.likes });
+    saveState();
   };
 
-  el.querySelector(".retweet").onclick = () => {
+  rtBtn.onclick = () => {
     state.retweeted = !state.retweeted;
     state.retweets += state.retweeted ? 1 : -1;
-    el.querySelector(".retweet span").textContent = state.retweets;
-    save();
+    rtBtn.classList.toggle("retweeted", state.retweeted);
+    rtBtn.querySelector("span").textContent = state.retweets;
+
+    sendToQualtrics("USER_RETWEET", { postId, count: state.retweets });
+    saveState();
+  };
+
+  commentBtn.onclick = () => {
+    commentBox.style.display = "block";
+    ta.focus();
+    sendToQualtrics("COMMENT_BOX_OPEN", { postId });
+  };
+
+  submitBtn.onclick = () => {
+    const txt = ta.value.trim();
+    if (!txt) return;
+
+    state.comments.push(txt);
+    ta.value = "";
+    commentBox.style.display = "none";
+
+    commentBtn.querySelector("span").textContent =
+      p.replies.length + state.comments.length;
+
+    sendToQualtrics("USER_COMMENT", { postId, text: txt });
+    saveState();
+    renderUserComments();
   };
 }
 
-// -------- AI Summary --------
+/* ===============================
+   AI SUMMARY
+================================ */
 function renderAISummary(p) {
-  const el = document.createElement("article");
-  el.className = "post ai-summary";
+  if (!p.aiSummary) return;
 
-  el.innerHTML = `
+  const box = document.createElement("div");
+  box.className = "ai-summary";
+
+  box.innerHTML = `
     <div class="avatar">🤖</div>
     <div class="content">
       <div class="name">AI Summary</div>
@@ -256,56 +207,81 @@ function renderAISummary(p) {
     </div>
   `;
 
-  thread.appendChild(el);
+  thread.appendChild(box);
 }
 
-// -------- Replies --------
+/* ===============================
+   PRELOADED REPLIES
+================================ */
 function renderReply(r) {
-  const el = document.createElement("article");
-  el.className = "post";
+  const wrapper = document.createElement("article");
+  wrapper.className = "post";
 
-  el.innerHTML = `
+  wrapper.innerHTML = `
     <div class="avatar" style="background:${colorFromName(r.author)}">
       ${initials(r.author)}
     </div>
+
     <div class="content">
       <div class="name">${r.author}</div>
-      <div class="text">${r.text}</div>
+      <div class="text">${highlight(r.text)}</div>
     </div>
   `;
 
-  thread.appendChild(el);
+  thread.appendChild(wrapper);
 }
 
-// -------- User Comments --------
+/* ===============================
+   USER COMMENTS (FULL POSTS)
+================================ */
 function renderUserComments() {
-  state.comments.forEach(c => {
-    const el = document.createElement("article");
-    el.className = "post user-comment";
+  document
+    .querySelectorAll(".user-reply")
+    .forEach(el => el.remove());
 
-    el.innerHTML = `
-      <div class="avatar" style="background:#2563eb">YOU</div>
+  state.comments.forEach(txt => {
+    const wrapper = document.createElement("article");
+    wrapper.className = "post user-reply";
+
+    wrapper.innerHTML = `
+      <div class="avatar" style="background:#64748b">YO</div>
       <div class="content">
         <div class="name">You</div>
-        <div class="text">${c}</div>
+        <div class="text">${highlight(txt)}</div>
       </div>
     `;
 
-    thread.appendChild(el);
+    thread.appendChild(wrapper);
   });
 }
 
-// -------- Submit Reply --------
-document.getElementById("postReply").onclick = () => {
-  const ta = document.getElementById("userReply");
-  const txt = ta.value.trim();
-  if (!txt) return;
+/* ===============================
+   SCROLL DEPTH
+================================ */
+let maxScroll = 0;
 
-  state.comments.push(txt);
-  ta.value = "";
-  save();
-  location.reload(); // ensures count sync + order
-};
+window.addEventListener("scroll", () => {
+  const docHeight =
+    document.documentElement.scrollHeight - window.innerHeight;
+  const depth = Math.round((window.scrollY / docHeight) * 100);
+
+  if (depth > maxScroll) {
+    maxScroll = depth;
+    sendToQualtrics("SCROLL_DEPTH_CONVO", { postId, depth });
+  }
+});
+
+/* ===============================
+   TIME ON PAGE
+================================ */
+const start = Date.now();
+
+window.addEventListener("beforeunload", () => {
+  sendToQualtrics("TIME_ON_CONVO", {
+    postId,
+    ms: Date.now() - start
+  });
+});
 </script>
 
 </body>
