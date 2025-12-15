@@ -1,82 +1,231 @@
+<style>
+/* -------------------------
+   GLOBAL BOX SIZING
+------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* -------------------------
+   ROOT VARIABLES
+------------------------- */
+:root {
+  --bg: #f6f7fb;
+  --card: #fff;
+  --muted: #6b7280;
+  --accent: #1f6feb;
+  --radius: 12px;
+  --shadow: 0 4px 12px rgba(35, 40, 50, 0.08);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto;
+}
+
+/* -------------------------
+   BODY
+------------------------- */
 body {
-  font-family: Arial, sans-serif;
-  background: #f5f8fa;
-  margin: 0;
-  padding: 0;
+  background: var(--bg);
+  margin: 20px;
 }
 
-/* --- Timeline container --- */
-#timeline {
-  max-width: 600px;
+/* -------------------------
+   CONTAINERS
+------------------------- */
+.container {
+  max-width: 800px;
   margin: auto;
-  padding: 10px;
 }
 
-/* --- Individual post cards --- */
+/* -------------------------
+   POSTS
+------------------------- */
 .post {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
   display: flex;
-  background: white;
-  border-radius: 10px;
-  padding: 10px;
-  margin: 10px 0;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.post:hover {
-  transform: scale(1.01);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-/* --- Avatar styling --- */
 .avatar {
-  width: 45px;
-  height: 45px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  margin-right: 10px;
-  flex-shrink: 0;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 16px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 700;
 }
 
-/* --- Post text and buttons --- */
 .content {
   flex: 1;
 }
 
-button {
-  background-color: #1da1f2;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 6px 10px;
-  cursor: pointer;
-  font-size: 0.9em;
+.meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 4px;
 }
 
-button:hover {
-  background-color: #0d8de1;
+.name {
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.handle {
+  color: var(--muted);
+}
+
+.text {
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.thumb {
+  width: 100%;
+  border-radius: 10px;
+  margin-top: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  object-fit: cover;
 }
 
 .actions {
-  font-size: 0.9em;
-  color: #555;
-  margin-bottom: 5px;
+  margin-top: 12px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  color: var(--muted);
 }
 
+.actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.actions button:hover {
+  background: #f1f5f9;
+}
+
+.liked {
+  color: #e0245e;
+}
+
+.retweeted {
+  color: #17bf63;
+}
+
+/* -------------------------
+   COMMENT BOX
+------------------------- */
+.comment-box {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.comment-box textarea {
+  width: 100%;
+  max-width: 100%;
+  padding: 8px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  font-size: 14px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.comment-box button {
+  margin-top: 6px;
+  background: var(--accent);
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
+/* -------------------------
+   COMMENT SECTION
+------------------------- */
 .comment-section {
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .reply {
   background: #f0f2f5;
-  border-radius: 8px;
   padding: 6px 10px;
+  border-radius: 8px;
   margin-top: 6px;
-  font-size: 0.9em;
 }
 
+/* -------------------------
+   AI SUMMARY
+------------------------- */
+.ai-summary {
+  background: #fffdf8;
+  border: 1px solid #fbe5b3;
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.ai-summary .avatar {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  font-size: 20px;
+}
+
+/* -------------------------
+   BACK BUTTON
+------------------------- */
+#backBtn {
+  display: block;
+  width: fit-content;
+  margin: 20px auto;
+  padding: 10px 18px;
+  background: #e6ecf0;
+  color: #333;
+  border-radius: 20px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+#backBtn:hover {
+  background: #d8e2e7;
+}
+
+/* -------------------------
+   HIGHLIGHTING
+------------------------- */
+.highlight-mention {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.highlight-hashtag {
+  color: #059669;
+  font-weight: 600;
+}
+
+/* -------------------------
+   SEARCH BOX (sidebar)
+------------------------- */
+#searchInput {
+  width: 100%;
+  max-width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #d4d4d8;
+  box-sizing: border-box;
+}
+</style>
