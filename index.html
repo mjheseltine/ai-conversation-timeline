@@ -13,18 +13,11 @@
   --accent: #1f6feb;
   --radius: 12px;
   --shadow: 0 4px 12px rgba(35, 40, 50, 0.08);
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto;
 }
 
-body {
-  background: var(--bg);
-  margin: 20px;
-}
-.container {
-  max-width: 800px;
-  margin: auto;
-}
+body { background: var(--bg); margin: 20px; }
+.container { max-width: 800px; margin: auto; }
 
 .post {
   background: var(--card);
@@ -33,12 +26,7 @@ body {
   margin-bottom: 16px;
   display: flex;
   gap: 12px;
-  align-items: flex-start;
   box-shadow: var(--shadow);
-  transition: transform 0.15s ease;
-}
-.post:hover {
-  transform: translateY(-2px);
 }
 
 .avatar {
@@ -49,48 +37,29 @@ body {
   place-items: center;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, #1f6feb, #3b82f6);
 }
 
-.content {
-  flex: 1;
-}
+.content { flex: 1; }
+
 .meta {
   font-size: 13px;
   color: var(--muted);
-  margin-bottom: 4px;
 }
-.name {
-  font-weight: 700;
-  margin-right: 6px;
-}
-.handle {
-  color: var(--muted);
-}
+.name { font-weight: 700; margin-right: 6px; }
+.handle { color: var(--muted); }
 
-.text {
-  margin-top: 6px;
-  line-height: 1.4;
-  font-size: 15px;
-}
+.text { margin-top: 6px; font-size: 15px; line-height: 1.45; }
 
 .thumb {
   width: 100%;
   border-radius: 10px;
   margin-top: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s ease;
-  object-fit: cover;
-}
-.thumb:hover {
-  transform: scale(1.015);
 }
 
 .actions {
   margin-top: 12px;
   display: flex;
-  gap: 20px;
-  align-items: center;
+  gap: 18px;
   color: var(--muted);
   font-size: 14px;
 }
@@ -101,15 +70,10 @@ body {
   padding: 4px 6px;
   border-radius: 6px;
 }
-.actions button:hover {
-  background: #f1f5f9;
-}
-.actions .liked {
-  color: #e0245e;
-}
-.actions .retweeted {
-  color: #17bf63;
-}
+.actions button:hover { background: #f1f5f9; }
+
+.liked { color: #e0245e; }
+.retweeted { color: #17bf63; }
 
 .view-link {
   display: inline-block;
@@ -120,22 +84,33 @@ body {
   border-radius: 8px;
   font-weight: 600;
   text-decoration: none;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.view-link:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
-.highlight-mention {
-  color: #1d4ed8;
+/* ---- Inline comment box (timeline only) ---- */
+.inline-comment {
+  margin-top: 10px;
+  display: none;
+}
+.inline-comment textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #d4d4d8;
+  padding: 8px;
+  font-size: 14px;
+}
+.inline-comment button {
+  margin-top: 6px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
   font-weight: 600;
 }
-.highlight-hashtag {
-  color: #059669;
-  font-weight: 600;
-}
+
+.highlight-mention { color: #1d4ed8; font-weight: 600; }
+.highlight-hashtag { color: #059669; font-weight: 600; }
 </style>
 </head>
 
@@ -143,11 +118,10 @@ body {
 <div class="container" id="timeline"></div>
 
 <script>
-// ----------- Helpers -------------
+/* ---------------- Helpers ---------------- */
 function initials(name) {
   return name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
 }
-
 function colorFromName(name) {
   const colors = [
     "linear-gradient(135deg,#1f6feb,#3b82f6)",
@@ -158,86 +132,95 @@ function colorFromName(name) {
   ];
   return colors[name.charCodeAt(0) % colors.length];
 }
-
 function highlight(text) {
   return text
     .replace(/(@[a-zA-Z0-9_]+)/g, '<span class="highlight-mention">$1</span>')
     .replace(/(#[a-zA-Z0-9_]+)/g, '<span class="highlight-hashtag">$1</span>');
 }
 
-// ----------- Load State -------------
-let timelineState = JSON.parse(sessionStorage.getItem("timelineState") || "{}");
-
+/* ---------------- State ---------------- */
+let timelineState = JSON.parse(
+  sessionStorage.getItem("timelineState") || "{}"
+);
 function saveState() {
   sessionStorage.setItem("timelineState", JSON.stringify(timelineState));
 }
 
-// ----------- Load Posts -------------
+/* ---------------- Load Posts ---------------- */
 const timeline = document.getElementById("timeline");
 
 fetch("data/posts.json")
   .then(r => r.json())
   .then(posts => {
-    posts.forEach(post => timeline.appendChild(createPost(post)));
+    posts.forEach(p => timeline.appendChild(createPost(p)));
   });
 
-// ----------- Create Post -------------
-function createPost(data) {
+/* ---------------- Create Post ---------------- */
+function createPost(p) {
 
-  // initial state
-  let state = timelineState[data.id] || {
-    likes: data.likes || 0,
-    retweets: data.retweets || 0,
+  let state = timelineState[p.id] || {
+    likes: p.likes || 0,
+    retweets: p.retweets || 0,
     comments: [],
     liked: false,
     retweeted: false
   };
 
-  const wrapper = document.createElement("article");
-  wrapper.className = "post";
+  timelineState[p.id] = state;
+  saveState();
 
-  const avatar = document.createElement("div");
-  avatar.className = "avatar";
-  avatar.style.background = colorFromName(data.author);
-  avatar.textContent = initials(data.author);
+  const wrap = document.createElement("article");
+  wrap.className = "post";
 
-  const c = document.createElement("div");
-  c.className = "content";
-
-  c.innerHTML = `
-    <div class="meta">
-      <span class="name">${data.author}</span>
-      <span class="handle">${data.handle}</span> · 
-      <span class="time">${data.timestamp}</span>
+  wrap.innerHTML = `
+    <div class="avatar" style="background:${colorFromName(p.author)}">
+      ${initials(p.author)}
     </div>
-    <div class="text">${highlight(data.text)}</div>
-    ${data.image ? `<img src="${data.image}" class="thumb">` : ""}
+
+    <div class="content">
+      <div class="meta">
+        <span class="name">${p.author}</span>
+        <span class="handle">${p.handle}</span> · ${p.timestamp}
+      </div>
+
+      <div class="text">${highlight(p.text)}</div>
+      ${p.image ? `<img src="${p.image}" class="thumb">` : ""}
+
+      <div class="actions">
+        <button class="like ${state.liked ? "liked" : ""}">
+          ❤️ <span>${state.likes}</span>
+        </button>
+        <button class="rt ${state.retweeted ? "retweeted" : ""}">
+          🔁 <span>${state.retweets}</span>
+        </button>
+        <button class="comment">
+          💬 <span>${state.comments.length}</span>
+        </button>
+      </div>
+
+      <div class="inline-comment">
+        <textarea placeholder="Write a reply..."></textarea>
+        <button>Post</button>
+      </div>
+
+      <a class="view-link" href="posts/post.html?id=${p.id}">
+        View Conversation →
+      </a>
+    </div>
   `;
 
-  const actions = document.createElement("div");
-  actions.className = "actions";
-  actions.innerHTML = `
-    <button class="like ${state.liked ? "liked" : ""}">❤️ <span>${state.likes}</span></button>
-    <button class="retweet ${state.retweeted ? "retweeted" : ""}">🔁 <span>${state.retweets}</span></button>
-    <button class="comment">💬 <span>${state.comments.length}</span></button>
-  `;
-
-  const view = document.createElement("a");
-  view.href = `posts/post.html?id=${data.id}`;
-  view.className = "view-link";
-  view.textContent = "View Conversation →";
-
-  c.append(actions, view);
-
-  // ------ Button Logic ------
-  const [likeBtn, rtBtn, commentBtn] = actions.querySelectorAll("button");
+  const likeBtn = wrap.querySelector(".like");
+  const rtBtn = wrap.querySelector(".rt");
+  const commentBtn = wrap.querySelector(".comment");
+  const commentBox = wrap.querySelector(".inline-comment");
+  const ta = commentBox.querySelector("textarea");
+  const postBtn = commentBox.querySelector("button");
 
   likeBtn.onclick = () => {
     state.liked = !state.liked;
     state.likes += state.liked ? 1 : -1;
     likeBtn.classList.toggle("liked", state.liked);
     likeBtn.querySelector("span").textContent = state.likes;
-    timelineState[data.id] = state;
     saveState();
   };
 
@@ -246,19 +229,30 @@ function createPost(data) {
     state.retweets += state.retweeted ? 1 : -1;
     rtBtn.classList.toggle("retweeted", state.retweeted);
     rtBtn.querySelector("span").textContent = state.retweets;
-    timelineState[data.id] = state;
     saveState();
   };
 
-  commentBtn.onclick = () => view.click();
+  commentBtn.onclick = () => {
+    commentBox.style.display =
+      commentBox.style.display === "none" ? "block" : "none";
+    ta.focus();
+  };
 
-  wrapper.append(avatar, c);
-  return wrapper;
+  postBtn.onclick = () => {
+    const txt = ta.value.trim();
+    if (!txt) return;
+    state.comments.push({
+      text: txt,
+      ts: Date.now()
+    });
+    ta.value = "";
+    commentBox.style.display = "none";
+    commentBtn.querySelector("span").textContent = state.comments.length;
+    saveState();
+  };
+
+  return wrap;
 }
-
-// Refresh timeline state on focus
-window.addEventListener("focus", () => location.reload());
 </script>
-
 </body>
 </html>
