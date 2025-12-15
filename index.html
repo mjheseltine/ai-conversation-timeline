@@ -1,33 +1,17 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Conversation Timeline</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Timeline</title>
+
 <link rel="stylesheet" href="assets/styles.css">
 
-<!-- EmojiButton library -->
-<script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.2/dist/index.min.js"></script>
 </head>
 <body>
 
 <div class="container">
-  <div class="main-content">
-    <div id="timeline"></div>
-  </div>
-  <aside class="sidebar">
-    <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Search posts...">
-    </div>
-    <div class="trending">
-      <h3>Trending Topics</h3>
-      <ul id="trendingList"></ul>
-    </div>
-    <div class="weather">
-      <h3>Local Weather</h3>
-      <div id="weatherInfo">Loading...</div>
-    </div>
-  </aside>
+  <div id="timeline"></div>
 </div>
 
 <script>
@@ -66,6 +50,7 @@ function highlight(text) {
    STATE
 ================================ */
 let timelineState = JSON.parse(sessionStorage.getItem("timelineState") || "{}");
+
 function saveState() {
   sessionStorage.setItem("timelineState", JSON.stringify(timelineState));
 }
@@ -98,6 +83,7 @@ const viewObserver = new IntersectionObserver(entries => {
    CREATE POST
 ================================ */
 function createPost(data) {
+
   let state = timelineState[data.id] || {
     likes: data.likes || 0,
     retweets: data.retweets || 0,
@@ -132,18 +118,25 @@ function createPost(data) {
     ${data.image ? `<img src="${data.image}" class="thumb">` : ""}
 
     <div class="actions">
-      <button class="like ${state.liked ? "liked" : ""}">❤️ <span>${state.likes}</span></button>
-      <button class="retweet ${state.retweeted ? "retweeted" : ""}">🔁 <span>${state.retweets}</span></button>
-      <button class="comment">💬 <span>${state.comments.length}</span></button>
+      <button class="like ${state.liked ? "liked" : ""}">
+        ❤️ <span>${state.likes}</span>
+      </button>
+      <button class="retweet ${state.retweeted ? "retweeted" : ""}">
+        🔁 <span>${state.retweets}</span>
+      </button>
+      <button class="comment">
+        💬 <span>${state.comments.length}</span>
+      </button>
     </div>
 
     <div class="comment-box" style="display:none;">
       <textarea placeholder="Write a comment..."></textarea>
       <button>Submit</button>
-      <button class="emoji-btn">😊</button>
     </div>
 
-    <a class="view-link" href="posts/post.html?id=${data.id}">View Conversation →</a>
+    <a class="view-link" href="posts/post.html?id=${data.id}">
+      View Conversation →
+    </a>
   `;
 
   wrapper.append(avatar, c);
@@ -153,14 +146,8 @@ function createPost(data) {
   const commentBtn = c.querySelector(".comment");
   const commentBox = c.querySelector(".comment-box");
   const submitBtn = commentBox.querySelector("button");
-  const emojiBtn = c.querySelector(".emoji-btn");
   const ta = commentBox.querySelector("textarea");
   const viewLink = c.querySelector(".view-link");
-
-  /* --- Emoji Picker --- */
-  const picker = new EmojiButton({ position: 'top-start' });
-  emojiBtn.addEventListener('click', () => picker.togglePicker(emojiBtn));
-  picker.on('emoji', emoji => { ta.value += emoji; });
 
   /* --- Like --- */
   likeBtn.onclick = () => {
@@ -169,7 +156,10 @@ function createPost(data) {
     likeBtn.classList.toggle("liked", state.liked);
     likeBtn.querySelector("span").textContent = state.likes;
 
-    sendToQualtrics("USER_LIKE", { postId: data.id, count: state.likes });
+    sendToQualtrics("USER_LIKE", {
+      postId: data.id,
+      count: state.likes
+    });
 
     timelineState[data.id] = state;
     saveState();
@@ -182,7 +172,10 @@ function createPost(data) {
     rtBtn.classList.toggle("retweeted", state.retweeted);
     rtBtn.querySelector("span").textContent = state.retweets;
 
-    sendToQualtrics("USER_RETWEET", { postId: data.id, count: state.retweets });
+    sendToQualtrics("USER_RETWEET", {
+      postId: data.id,
+      count: state.retweets
+    });
 
     timelineState[data.id] = state;
     saveState();
@@ -192,74 +185,50 @@ function createPost(data) {
   commentBtn.onclick = () => {
     commentBox.style.display = "block";
     ta.focus();
-    sendToQualtrics("COMMENT_BOX_OPEN", { postId: data.id });
+
+    sendToQualtrics("COMMENT_BOX_OPEN", {
+      postId: data.id
+    });
   };
 
   /* --- Comment submit --- */
   submitBtn.onclick = () => {
     const txt = ta.value.trim();
     if (!txt) return;
+
     state.comments.push(txt);
     ta.value = "";
     commentBox.style.display = "none";
+
     commentBtn.querySelector("span").textContent = state.comments.length;
 
-    sendToQualtrics("USER_COMMENT", { postId: data.id, text: txt });
+    sendToQualtrics("USER_COMMENT", {
+      postId: data.id,
+      text: txt
+    });
 
     timelineState[data.id] = state;
     saveState();
   };
 
   /* --- Open conversation --- */
-  viewLink.onclick = () => sendToQualtrics("POST_OPEN", { postId: data.id });
+  viewLink.onclick = () => {
+    sendToQualtrics("POST_OPEN", { postId: data.id });
+  };
 
   return wrapper;
 }
 
 /* ===============================
-   SEARCH
-================================ */
-const searchInput = document.getElementById("searchInput");
-searchInput.addEventListener("input", e => {
-  const q = e.target.value.toLowerCase();
-  document.querySelectorAll("#timeline .post").forEach(post => {
-    const text = post.querySelector(".text").textContent.toLowerCase();
-    post.style.display = text.includes(q) ? "flex" : "none";
-  });
-});
-
-/* ===============================
-   TRENDING TOPICS
-================================ */
-const trendingList = document.getElementById("trendingList");
-const trendingTopics = ["#AI", "#ClimateChange", "#SpaceX", "#TechNews", "#OpenAI"];
-trendingTopics.forEach(t => {
-  const li = document.createElement("li");
-  li.textContent = t;
-  trendingList.appendChild(li);
-});
-
-/* ===============================
-   LOCAL WEATHER
-================================ */
-const weatherDiv = document.getElementById("weatherInfo");
-navigator.geolocation?.getCurrentPosition(pos => {
-  const lat = pos.coords.latitude;
-  const lon = pos.coords.longitude;
-  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
-    .then(r => r.json())
-    .then(data => {
-      weatherDiv.textContent = `Temp: ${data.current_weather.temperature}°C, Wind: ${data.current_weather.windspeed} km/h`;
-    }).catch(() => weatherDiv.textContent = "Weather unavailable");
-}, () => weatherDiv.textContent = "Location not available");
-
-/* ===============================
    SCROLL DEPTH
 ================================ */
 let maxScroll = 0;
+
 window.addEventListener("scroll", () => {
-  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const docHeight =
+    document.documentElement.scrollHeight - window.innerHeight;
   const depth = Math.round((window.scrollY / docHeight) * 100);
+
   if (depth > maxScroll) {
     maxScroll = depth;
     sendToQualtrics("SCROLL_DEPTH", { depth });
@@ -270,8 +239,11 @@ window.addEventListener("scroll", () => {
    TIME ON PAGE
 ================================ */
 const pageStart = Date.now();
+
 window.addEventListener("beforeunload", () => {
-  sendToQualtrics("TIME_ON_PAGE", { ms: Date.now() - pageStart });
+  sendToQualtrics("TIME_ON_PAGE", {
+    ms: Date.now() - pageStart
+  });
 });
 </script>
 
