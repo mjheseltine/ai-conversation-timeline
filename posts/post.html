@@ -13,38 +13,56 @@
   --accent:#1f6feb;
   --radius:12px;
   --shadow:0 4px 12px rgba(35,40,50,0.08);
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto;
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto;
 }
 
 body { background:var(--bg); margin:20px; }
+
 .container { max-width:800px; margin:auto; }
 
 .post {
   background:var(--card);
   border-radius:var(--radius);
   padding:14px;
+  box-shadow:var(--shadow);
   display:flex;
   gap:12px;
-  box-shadow:var(--shadow);
-  margin-bottom:14px;
+  margin-bottom:16px;
 }
 
 .avatar {
-  width:48px; height:48px;
+  width:48px;
+  height:48px;
   border-radius:50%;
   display:grid;
   place-items:center;
-  font-weight:700;
   color:#fff;
+  font-weight:700;
 }
 
 .content { flex:1; }
-.meta { font-size:13px; color:var(--muted); }
-.name { font-weight:700; margin-right:4px; }
-.handle { color:var(--muted); }
 
-.text { margin-top:6px; font-size:15px; line-height:1.45; }
-.thumb { width:100%; border-radius:10px; margin-top:10px; }
+.meta {
+  font-size:13px;
+  color:var(--muted);
+}
+
+.name {
+  font-weight:700;
+  margin-right:6px;
+}
+
+.text {
+  margin-top:6px;
+  font-size:15px;
+  line-height:1.45;
+}
+
+.thumb {
+  width:100%;
+  border-radius:10px;
+  margin-top:10px;
+}
 
 .actions {
   margin-top:12px;
@@ -52,6 +70,7 @@ body { background:var(--bg); margin:20px; }
   gap:20px;
   color:var(--muted);
 }
+
 .actions button {
   background:none;
   border:none;
@@ -59,229 +78,235 @@ body { background:var(--bg); margin:20px; }
   padding:4px 6px;
   border-radius:6px;
 }
+
 .actions button:hover { background:#f1f5f9; }
+
 .liked { color:#e0245e; }
 .retweeted { color:#17bf63; }
 
-/* ---- AI summary ---- */
+/* AI SUMMARY */
 .ai-summary {
   background:#fffdf8;
   border:1px solid #fbe5b3;
-  border-radius:10px;
-  padding:12px;
-  display:flex;
-  gap:12px;
-  box-shadow:var(--shadow);
-  margin-bottom:16px;
-}
-.ai-summary .avatar {
-  background:linear-gradient(135deg,#6366f1,#8b5cf6);
-  font-size:20px;
 }
 
-/* ---- User comment highlight ---- */
+/* USER COMMENT HIGHLIGHT */
 .user-comment {
-  background:#eef5ff;
-  border:1px solid #d6e7ff;
+  background:#f0f7ff;
+  border:1px solid #dbeafe;
 }
 
-/* ---- Comment box ---- */
-.comment-box { margin-top:14px; }
+.comment-box {
+  margin-top:14px;
+}
+
 .comment-box textarea {
   width:100%;
+  min-height:80px;
   border-radius:8px;
-  border:1px solid #d4d4d8;
+  border:1px solid #d1d5db;
   padding:8px;
   font-size:14px;
 }
+
 .comment-box button {
   margin-top:6px;
   background:var(--accent);
-  color:#fff;
+  color:white;
   border:none;
-  padding:7px 12px;
-  border-radius:6px;
-  cursor:pointer;
+  padding:7px 14px;
+  border-radius:8px;
   font-weight:600;
+  cursor:pointer;
 }
 
 #backBtn {
   display:block;
-  width:fit-content;
-  margin:20px auto;
+  margin:24px auto;
   padding:10px 18px;
   background:#e6ecf0;
-  color:#333;
   border-radius:20px;
-  font-weight:600;
   text-decoration:none;
+  color:#333;
+  font-weight:600;
 }
-
-.highlight-mention { color:#1d4ed8; font-weight:600; }
-.highlight-hashtag { color:#059669; font-weight:600; }
 </style>
 </head>
 
 <body>
+
 <div class="container">
   <div id="thread"></div>
+
+  <div class="comment-box">
+    <textarea id="userReply" placeholder="Write a reply..."></textarea>
+    <button id="postReply">Reply</button>
+  </div>
+
   <a id="backBtn" href="../index.html">⬅ Back to Timeline</a>
 </div>
 
 <script>
-/* ---------- Helpers ---------- */
-function initials(name){
-  return name.split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+// -------- Helpers --------
+function initials(name) {
+  return name.split(/\s+/).map(w => w[0]).join("").slice(0,2).toUpperCase();
 }
-function colorFromName(name){
-  const c=[
+
+function colorFromName(name) {
+  const colors = [
     "linear-gradient(135deg,#1f6feb,#3b82f6)",
     "linear-gradient(135deg,#10b981,#34d399)",
     "linear-gradient(135deg,#f59e0b,#fbbf24)",
-    "linear-gradient(135deg,#ec4899,#f472b6)"
+    "linear-gradient(135deg,#ec4899,#f472b6)",
+    "linear-gradient(135deg,#6366f1,#8b5cf6)"
   ];
-  return c[name.charCodeAt(0)%c.length];
-}
-function highlight(t){
-  return t
-    .replace(/(@\w+)/g,'<span class="highlight-mention">$1</span>')
-    .replace(/(#\w+)/g,'<span class="highlight-hashtag">$1</span>');
+  return colors[name.charCodeAt(0) % colors.length];
 }
 
-/* ---------- Load state ---------- */
+// -------- Load ID + State --------
 const postId = new URLSearchParams(location.search).get("id");
 
 let timelineState = JSON.parse(sessionStorage.getItem("timelineState") || "{}");
-let state = timelineState[postId] || {
-  likes:0, retweets:0, comments:[], liked:false, retweeted:false
-};
-timelineState[postId] = state;
-save();
 
-function save(){
+const state = timelineState[postId] ||= {
+  likes:0,
+  retweets:0,
+  comments:[],
+  liked:false,
+  retweeted:false
+};
+
+function save() {
+  timelineState[postId] = state;
   sessionStorage.setItem("timelineState", JSON.stringify(timelineState));
 }
 
-/* ---------- Render ---------- */
 const thread = document.getElementById("thread");
 
+// -------- Load Post --------
 fetch("../data/posts.json")
-  .then(r=>r.json())
-  .then(posts=>{
-    const p = posts.find(x=>x.id===postId);
-    renderMainPost(p);
-    renderAISummary(p);
-    p.replies.forEach(renderReply);
+  .then(r => r.json())
+  .then(posts => {
+    const post = posts.find(p => p.id === postId);
+
+    if (!state.initialized) {
+      state.likes = post.likes || 0;
+      state.retweets = post.retweets || 0;
+      state.initialized = true;
+      save();
+    }
+
+    renderMainPost(post);
+    renderAISummary(post);
+    post.replies.forEach(r => renderReply(r));
     renderUserComments();
   });
 
-function renderMainPost(p){
-  const el = document.createElement("div");
-  el.className="post";
-  el.innerHTML=`
+// -------- Render Main --------
+function renderMainPost(p) {
+  const el = document.createElement("article");
+  el.className = "post";
+
+  el.innerHTML = `
     <div class="avatar" style="background:${colorFromName(p.author)}">
       ${initials(p.author)}
     </div>
     <div class="content">
       <div class="meta">
         <span class="name">${p.author}</span>
-        <span class="handle">${p.handle}</span> · ${p.timestamp}
+        ${p.handle} · ${p.timestamp}
       </div>
-      <div class="text">${highlight(p.text)}</div>
-      ${p.image?`<img src="../${p.image}" class="thumb">`:""}
+      <div class="text">${p.text}</div>
+      ${p.image ? `<img src="../${p.image}" class="thumb">` : ""}
       <div class="actions">
-        <button class="like ${state.liked?"liked":""}">
-          ❤️ <span>${state.likes}</span>
-        </button>
-        <button class="rt ${state.retweeted?"retweeted":""}">
-          🔁 <span>${state.retweets}</span>
-        </button>
-        <button class="comment">
-          💬 <span id="commentCount">${state.comments.length}</span>
-        </button>
-      </div>
-      <div class="comment-box">
-        <textarea placeholder="Write a reply..."></textarea>
-        <button>Post</button>
+        <button class="like ${state.liked ? "liked":""}">❤️ <span>${state.likes}</span></button>
+        <button class="retweet ${state.retweeted ? "retweeted":""}">🔁 <span>${state.retweets}</span></button>
+        <button class="comment">💬 <span>${p.replies.length + state.comments.length}</span></button>
       </div>
     </div>
   `;
+
   thread.appendChild(el);
 
-  const likeBtn = el.querySelector(".like");
-  const rtBtn = el.querySelector(".rt");
-  const postBtn = el.querySelector(".comment-box button");
-  const ta = el.querySelector("textarea");
-  const countEl = el.querySelector("#commentCount");
-
-  likeBtn.onclick=()=>{
-    state.liked=!state.liked;
-    state.likes+=state.liked?1:-1;
-    likeBtn.classList.toggle("liked",state.liked);
-    likeBtn.querySelector("span").textContent=state.likes;
+  el.querySelector(".like").onclick = () => {
+    state.liked = !state.liked;
+    state.likes += state.liked ? 1 : -1;
+    el.querySelector(".like span").textContent = state.likes;
     save();
   };
 
-  rtBtn.onclick=()=>{
-    state.retweeted=!state.retweeted;
-    state.retweets+=state.retweeted?1:-1;
-    rtBtn.classList.toggle("retweeted",state.retweeted);
-    rtBtn.querySelector("span").textContent=state.retweets;
+  el.querySelector(".retweet").onclick = () => {
+    state.retweeted = !state.retweeted;
+    state.retweets += state.retweeted ? 1 : -1;
+    el.querySelector(".retweet span").textContent = state.retweets;
     save();
-  };
-
-  postBtn.onclick=()=>{
-    const txt=ta.value.trim();
-    if(!txt) return;
-    state.comments.push({text:txt,ts:Date.now()});
-    ta.value="";
-    countEl.textContent=state.comments.length;
-    save();
-    renderUserComments();
   };
 }
 
-function renderAISummary(p){
-  if(!p.aiSummary) return;
-  const el=document.createElement("div");
-  el.className="ai-summary";
-  el.innerHTML=`
+// -------- AI Summary --------
+function renderAISummary(p) {
+  const el = document.createElement("article");
+  el.className = "post ai-summary";
+
+  el.innerHTML = `
     <div class="avatar">🤖</div>
     <div class="content">
       <div class="name">AI Summary</div>
       <div class="text">${p.aiSummary}</div>
-    </div>`;
+    </div>
+  `;
+
   thread.appendChild(el);
 }
 
-function renderReply(r){
-  const el=document.createElement("div");
-  el.className="post";
-  el.innerHTML=`
+// -------- Replies --------
+function renderReply(r) {
+  const el = document.createElement("article");
+  el.className = "post";
+
+  el.innerHTML = `
     <div class="avatar" style="background:${colorFromName(r.author)}">
       ${initials(r.author)}
     </div>
     <div class="content">
       <div class="name">${r.author}</div>
-      <div class="text">${highlight(r.text)}</div>
-    </div>`;
+      <div class="text">${r.text}</div>
+    </div>
+  `;
+
   thread.appendChild(el);
 }
 
-function renderUserComments(){
-  document.querySelectorAll(".user-comment").forEach(e=>e.remove());
-  state.comments.forEach(c=>{
-    const el=document.createElement("div");
-    el.className="post user-comment";
-    el.innerHTML=`
-      <div class="avatar" style="background:#1f6feb">YOU</div>
+// -------- User Comments --------
+function renderUserComments() {
+  state.comments.forEach(c => {
+    const el = document.createElement("article");
+    el.className = "post user-comment";
+
+    el.innerHTML = `
+      <div class="avatar" style="background:#2563eb">YOU</div>
       <div class="content">
         <div class="name">You</div>
-        <div class="text">${highlight(c.text)}</div>
-      </div>`;
+        <div class="text">${c}</div>
+      </div>
+    `;
+
     thread.appendChild(el);
   });
 }
+
+// -------- Submit Reply --------
+document.getElementById("postReply").onclick = () => {
+  const ta = document.getElementById("userReply");
+  const txt = ta.value.trim();
+  if (!txt) return;
+
+  state.comments.push(txt);
+  ta.value = "";
+  save();
+  location.reload(); // ensures count sync + order
+};
 </script>
+
 </body>
 </html>
