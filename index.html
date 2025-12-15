@@ -6,12 +6,34 @@
 <title>Timeline</title>
 
 <link rel="stylesheet" href="assets/styles.css">
+<!-- Emoji Picker -->
+<script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.2/dist/index.js"></script>
 
 </head>
 <body>
 
 <div class="container">
-  <div id="timeline"></div>
+  <!-- Main Timeline -->
+  <div class="main-column">
+    <div id="timeline"></div>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search posts...">
+    </div>
+
+    <div class="trending">
+      <h3>Trending</h3>
+      <ul id="trendingList"></ul>
+    </div>
+
+    <div class="weather">
+      <h3>Local Weather</h3>
+      <div id="weatherBox">Loading...</div>
+    </div>
+  </aside>
 </div>
 
 <script>
@@ -83,7 +105,6 @@ const viewObserver = new IntersectionObserver(entries => {
    CREATE POST
 ================================ */
 function createPost(data) {
-
   let state = timelineState[data.id] || {
     likes: data.likes || 0,
     retweets: data.retweets || 0,
@@ -131,6 +152,7 @@ function createPost(data) {
 
     <div class="comment-box" style="display:none;">
       <textarea placeholder="Write a comment..."></textarea>
+      <button class="emoji-btn">😀</button>
       <button>Submit</button>
     </div>
 
@@ -145,7 +167,8 @@ function createPost(data) {
   const rtBtn = c.querySelector(".retweet");
   const commentBtn = c.querySelector(".comment");
   const commentBox = c.querySelector(".comment-box");
-  const submitBtn = commentBox.querySelector("button");
+  const submitBtn = commentBox.querySelector("button:last-of-type");
+  const emojiBtn = commentBox.querySelector(".emoji-btn");
   const ta = commentBox.querySelector("textarea");
   const viewLink = c.querySelector(".view-link");
 
@@ -185,11 +208,16 @@ function createPost(data) {
   commentBtn.onclick = () => {
     commentBox.style.display = "block";
     ta.focus();
-
-    sendToQualtrics("COMMENT_BOX_OPEN", {
-      postId: data.id
-    });
+    sendToQualtrics("COMMENT_BOX_OPEN", { postId: data.id });
   };
+
+  /* --- Emoji Picker --- */
+  const picker = new EmojiButton({ position: 'top-end' });
+  emojiBtn.addEventListener('click', () => picker.togglePicker(emojiBtn));
+  picker.on('emoji', emoji => {
+    ta.value += emoji;
+    ta.focus();
+  });
 
   /* --- Comment submit --- */
   submitBtn.onclick = () => {
@@ -212,23 +240,65 @@ function createPost(data) {
   };
 
   /* --- Open conversation --- */
-  viewLink.onclick = () => {
-    sendToQualtrics("POST_OPEN", { postId: data.id });
-  };
+  viewLink.onclick = () => sendToQualtrics("POST_OPEN", { postId: data.id });
 
   return wrapper;
+}
+
+/* ===============================
+   SEARCH FEATURE
+================================ */
+const searchInput = document.getElementById("searchInput");
+searchInput.addEventListener("input", (e) => {
+  const query = e.target.value.toLowerCase();
+  document.querySelectorAll("#timeline .post").forEach(post => {
+    const text = post.querySelector(".text").textContent.toLowerCase();
+    post.style.display = text.includes(query) ? "flex" : "none";
+  });
+});
+
+/* ===============================
+   TRENDING TOPICS
+================================ */
+const trendingList = document.getElementById("trendingList");
+const topics = ["#AI", "#ClimateChange", "#Sports", "#TechNews", "#Music"];
+topics.forEach(topic => {
+  const li = document.createElement("li");
+  li.textContent = topic;
+  li.onclick = () => {
+    searchInput.value = topic;
+    searchInput.dispatchEvent(new Event("input"));
+  };
+  trendingList.appendChild(li);
+});
+
+/* ===============================
+   LOCAL WEATHER
+================================ */
+const weatherBox = document.getElementById("weatherBox");
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+    const data = await resp.json();
+    const temp = data.current_weather.temperature;
+    const wind = data.current_weather.windspeed;
+    weatherBox.textContent = `🌡️ ${temp}°C, 💨 ${wind} km/h`;
+  }, () => {
+    weatherBox.textContent = "Weather unavailable";
+  });
+} else {
+  weatherBox.textContent = "Geolocation not supported";
 }
 
 /* ===============================
    SCROLL DEPTH
 ================================ */
 let maxScroll = 0;
-
 window.addEventListener("scroll", () => {
-  const docHeight =
-    document.documentElement.scrollHeight - window.innerHeight;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
   const depth = Math.round((window.scrollY / docHeight) * 100);
-
   if (depth > maxScroll) {
     maxScroll = depth;
     sendToQualtrics("SCROLL_DEPTH", { depth });
@@ -239,11 +309,8 @@ window.addEventListener("scroll", () => {
    TIME ON PAGE
 ================================ */
 const pageStart = Date.now();
-
 window.addEventListener("beforeunload", () => {
-  sendToQualtrics("TIME_ON_PAGE", {
-    ms: Date.now() - pageStart
-  });
+  sendToQualtrics("TIME_ON_PAGE", { ms: Date.now() - pageStart });
 });
 </script>
 
