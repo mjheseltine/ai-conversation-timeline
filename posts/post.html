@@ -3,17 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Conversation</title>
-<link rel="stylesheet" href="../assets/styles.css">
+<title>Timeline</title>
 
-<!-- EmojiButton library -->
-<script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.2/dist/index.min.js"></script>
+<link rel="stylesheet" href="assets/styles.css">
+
 </head>
 <body>
 
 <div class="container">
-  <div id="thread"></div>
-  <a id="backBtn" href="../index.html">⬅ Back to Timeline</a>
+  <div id="timeline"></div>
 </div>
 
 <script>
@@ -51,155 +49,202 @@ function highlight(text) {
 /* ===============================
    STATE
 ================================ */
-const postId = new URLSearchParams(location.search).get("id");
 let timelineState = JSON.parse(sessionStorage.getItem("timelineState") || "{}");
-let state = timelineState[postId] || { likes:0, retweets:0, comments:[], liked:false, retweeted:false, initialized:false };
-function saveState() { timelineState[postId] = state; sessionStorage.setItem("timelineState", JSON.stringify(timelineState)); }
 
-const thread = document.getElementById("thread");
+function saveState() {
+  sessionStorage.setItem("timelineState", JSON.stringify(timelineState));
+}
 
 /* ===============================
-   LOAD POST DATA
+   LOAD POSTS
 ================================ */
-fetch("../data/posts.json")
+const timeline = document.getElementById("timeline");
+
+fetch("data/posts.json")
   .then(r => r.json())
   .then(posts => {
-    const post = posts.find(p => p.id === postId);
-    if(!post) return;
-
-    if(!state.initialized){
-      state.likes = post.likes || 0;
-      state.retweets = post.retweets || 0;
-      state.initialized = true;
-      saveState();
-    }
-
-    renderMainPost(post);
-    renderAISummary(post);
-    post.replies.forEach(renderReply);
-    renderUserComments();
+    posts.forEach(post => timeline.appendChild(createPost(post)));
   });
 
 /* ===============================
-   RENDER FUNCTIONS
+   INTERSECTION OBSERVER (VIEWS)
 ================================ */
-function renderMainPost(p){
-  const wrapper = document.createElement("div");
-  wrapper.className = "post";
+const viewObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const postId = entry.target.dataset.postId;
+      sendToQualtrics("POST_VIEW", { postId });
+      viewObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.6 });
 
-  wrapper.innerHTML = `
-    <div class="avatar" style="background:${colorFromName(p.author)}">${initials(p.author)}</div>
-    <div class="content">
-      <div class="meta">
-        <span class="name">${p.author}</span>
-        <span class="handle">${p.handle}</span> ·
-        <span class="time">${p.timestamp}</span>
-      </div>
-      <div class="text">${highlight(p.text)}</div>
-      ${p.image? `<img src="../${p.image}" class="thumb">` : ""}
-      <div class="actions">
-        <button class="like ${state.liked?'liked':''}">❤️ <span>${state.likes}</span></button>
-        <button class="retweet ${state.retweeted?'retweeted':''}">🔁 <span>${state.retweets}</span></button>
-        <button class="comment">💬 <span>${state.comments.length}</span></button>
-      </div>
-      <div class="comment-box" style="display:none;">
-        <textarea placeholder="Write a comment..."></textarea>
-        <button>Submit</button>
-        <button class="emoji-btn">😊</button>
-      </div>
-      <div class="comment-section"></div>
+/* ===============================
+   CREATE POST
+================================ */
+function createPost(data) {
+
+  let state = timelineState[data.id] || {
+    likes: data.likes || 0,
+    retweets: data.retweets || 0,
+    comments: [],
+    liked: false,
+    retweeted: false
+  };
+
+  const wrapper = document.createElement("article");
+  wrapper.className = "post";
+  wrapper.dataset.postId = data.id;
+
+  viewObserver.observe(wrapper);
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.style.background = colorFromName(data.author);
+  avatar.textContent = initials(data.author);
+
+  const c = document.createElement("div");
+  c.className = "content";
+
+  c.innerHTML = `
+    <div class="meta">
+      <span class="name">${data.author}</span>
+      <span class="handle">${data.handle}</span> · 
+      <span class="time">${data.timestamp}</span>
     </div>
+
+    <div class="text">${highlight(data.text)}</div>
+
+    ${data.image ? `<img src="${data.image}" class="thumb">` : ""}
+
+    <div class="actions">
+      <button class="like ${state.liked ? "liked" : ""}">
+        ❤️ <span>${state.likes}</span>
+      </button>
+      <button class="retweet ${state.retweeted ? "retweeted" : ""}">
+        🔁 <span>${state.retweets}</span>
+      </button>
+      <button class="comment">
+        💬 <span>${state.comments.length}</span>
+      </button>
+    </div>
+
+    <div class="comment-box" style="display:none;">
+      <textarea placeholder="Write a comment..."></textarea>
+      <button>Submit</button>
+    </div>
+
+    <a class="view-link" href="posts/post.html?id=${data.id}">
+      View Conversation →
+    </a>
   `;
 
-  thread.appendChild(wrapper);
+  wrapper.append(avatar, c);
 
-  const likeBtn = wrapper.querySelector(".like");
-  const rtBtn = wrapper.querySelector(".retweet");
-  const commentBtn = wrapper.querySelector(".comment");
-  const commentBox = wrapper.querySelector(".comment-box");
-  const submitBtn = wrapper.querySelector(".comment-box button");
-  const emojiBtn = wrapper.querySelector(".emoji-btn");
-  const ta = wrapper.querySelector("textarea");
+  const likeBtn = c.querySelector(".like");
+  const rtBtn = c.querySelector(".retweet");
+  const commentBtn = c.querySelector(".comment");
+  const commentBox = c.querySelector(".comment-box");
+  const submitBtn = commentBox.querySelector("button");
+  const ta = commentBox.querySelector("textarea");
+  const viewLink = c.querySelector(".view-link");
 
-  /* --- Emoji Picker --- */
-  const picker = new EmojiButton({ position: 'top-start' });
-  emojiBtn.addEventListener('click',()=>picker.togglePicker(emojiBtn));
-  picker.on('emoji', emoji => ta.value += emoji);
-
+  /* --- Like --- */
   likeBtn.onclick = () => {
     state.liked = !state.liked;
-    state.likes += state.liked?1:-1;
-    likeBtn.classList.toggle("liked",state.liked);
+    state.likes += state.liked ? 1 : -1;
+    likeBtn.classList.toggle("liked", state.liked);
     likeBtn.querySelector("span").textContent = state.likes;
-    sendToQualtrics("USER_LIKE",{postId:p.id,count:state.likes});
+
+    sendToQualtrics("USER_LIKE", {
+      postId: data.id,
+      count: state.likes
+    });
+
+    timelineState[data.id] = state;
     saveState();
   };
 
+  /* --- Retweet --- */
   rtBtn.onclick = () => {
     state.retweeted = !state.retweeted;
-    state.retweets += state.retweeted?1:-1;
-    rtBtn.classList.toggle("retweeted",state.retweeted);
+    state.retweets += state.retweeted ? 1 : -1;
+    rtBtn.classList.toggle("retweeted", state.retweeted);
     rtBtn.querySelector("span").textContent = state.retweets;
-    sendToQualtrics("USER_RETWEET",{postId:p.id,count:state.retweets});
+
+    sendToQualtrics("USER_RETWEET", {
+      postId: data.id,
+      count: state.retweets
+    });
+
+    timelineState[data.id] = state;
     saveState();
   };
 
+  /* --- Comment box toggle --- */
   commentBtn.onclick = () => {
     commentBox.style.display = "block";
     ta.focus();
-    sendToQualtrics("COMMENT_BOX_OPEN",{postId:p.id});
+
+    sendToQualtrics("COMMENT_BOX_OPEN", {
+      postId: data.id
+    });
   };
 
+  /* --- Comment submit --- */
   submitBtn.onclick = () => {
     const txt = ta.value.trim();
-    if(!txt) return;
+    if (!txt) return;
+
     state.comments.push(txt);
     ta.value = "";
     commentBox.style.display = "none";
-    wrapper.querySelector(".comment").querySelector("span").textContent = state.comments.length;
-    sendToQualtrics("USER_COMMENT",{postId:p.id,text:txt});
-    renderUserComments();
+
+    commentBtn.querySelector("span").textContent = state.comments.length;
+
+    sendToQualtrics("USER_COMMENT", {
+      postId: data.id,
+      text: txt
+    });
+
+    timelineState[data.id] = state;
     saveState();
   };
+
+  /* --- Open conversation --- */
+  viewLink.onclick = () => {
+    sendToQualtrics("POST_OPEN", { postId: data.id });
+  };
+
+  return wrapper;
 }
 
-function renderAISummary(p){
-  if(!p.aiSummary) return;
-  const box = document.createElement("div");
-  box.className = "ai-summary";
-  box.innerHTML = `
-    <div class="avatar">🤖</div>
-    <div class="content">
-      <div class="name">AI Summary</div>
-      <div class="text">${p.aiSummary}</div>
-    </div>
-  `;
-  thread.appendChild(box);
-}
+/* ===============================
+   SCROLL DEPTH
+================================ */
+let maxScroll = 0;
 
-function renderReply(r){
-  const wrapper = document.createElement("div");
-  wrapper.className = "post reply";
-  wrapper.innerHTML = `
-    <div class="avatar" style="background:${colorFromName(r.author)}">${initials(r.author)}</div>
-    <div class="content">
-      <div class="name">${r.author}</div>
-      <div class="text">${highlight(r.text)}</div>
-    </div>
-  `;
-  thread.appendChild(wrapper);
-}
+window.addEventListener("scroll", () => {
+  const docHeight =
+    document.documentElement.scrollHeight - window.innerHeight;
+  const depth = Math.round((window.scrollY / docHeight) * 100);
 
-function renderUserComments(){
-  const section = document.querySelector(".comment-section");
-  if(!section) return;
-  section.innerHTML = state.comments.map(c=>`
-    <div class="post user-comment">
-      <div class="avatar" style="background: #a1cfff">You</div>
-      <div class="content"><div class="text">${highlight(c)}</div></div>
-    </div>
-  `).join("");
-}
+  if (depth > maxScroll) {
+    maxScroll = depth;
+    sendToQualtrics("SCROLL_DEPTH", { depth });
+  }
+});
+
+/* ===============================
+   TIME ON PAGE
+================================ */
+const pageStart = Date.now();
+
+window.addEventListener("beforeunload", () => {
+  sendToQualtrics("TIME_ON_PAGE", {
+    ms: Date.now() - pageStart
+  });
+});
 </script>
 
 </body>
