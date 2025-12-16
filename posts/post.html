@@ -90,12 +90,13 @@ body { background:var(--bg); margin:20px; }
   border:1px solid #fbe5b3;
 }
 
-/* USER COMMENT HIGHLIGHT */
+/* USER COMMENT */
 .user-comment {
   background:#f0f7ff;
   border:1px solid #dbeafe;
 }
 
+/* COMMENT BOX */
 .comment-box {
   margin-top:14px;
 }
@@ -109,8 +110,13 @@ body { background:var(--bg); margin:20px; }
   font-size:14px;
 }
 
-.comment-box button {
+.comment-controls {
+  display:flex;
+  gap:8px;
   margin-top:6px;
+}
+
+.comment-box button {
   background:var(--accent);
   color:white;
   border:none;
@@ -118,6 +124,22 @@ body { background:var(--bg); margin:20px; }
   border-radius:8px;
   font-weight:600;
   cursor:pointer;
+}
+
+/* EMOJI PANEL */
+.emoji-panel {
+  display:none;
+  margin-top:6px;
+  background:#f9fafb;
+  border:1px solid #e5e7eb;
+  border-radius:8px;
+  padding:6px;
+  font-size:20px;
+}
+
+.emoji-panel span {
+  cursor:pointer;
+  margin:4px;
 }
 
 #backBtn {
@@ -140,7 +162,15 @@ body { background:var(--bg); margin:20px; }
 
   <div class="comment-box">
     <textarea id="userReply" placeholder="Write a reply..."></textarea>
-    <button id="postReply">Reply</button>
+
+    <div class="comment-controls">
+      <button id="emojiToggle">😊</button>
+      <button id="postReply">Reply</button>
+    </div>
+
+    <div id="emojiPanel" class="emoji-panel">
+      😀 😅 😂 😊 😍 🤔 😡 😢 👍 👎 🎉 ❤️ 🔥 🤖
+    </div>
   </div>
 
   <a id="backBtn" href="../index.html">⬅ Back to Timeline</a>
@@ -202,7 +232,7 @@ fetch("../data/posts.json")
     renderUserComments();
   });
 
-// -------- Render Main --------
+// -------- Render Functions --------
 function renderMainPost(p) {
   const el = document.createElement("article");
   el.className = "post";
@@ -218,32 +248,12 @@ function renderMainPost(p) {
       </div>
       <div class="text">${p.text}</div>
       ${p.image ? `<img src="../${p.image}" class="thumb">` : ""}
-      <div class="actions">
-        <button class="like ${state.liked ? "liked":""}">❤️ <span>${state.likes}</span></button>
-        <button class="retweet ${state.retweeted ? "retweeted":""}">🔁 <span>${state.retweets}</span></button>
-        <button class="comment">💬 <span>${p.replies.length + state.comments.length}</span></button>
-      </div>
     </div>
   `;
 
   thread.appendChild(el);
-
-  el.querySelector(".like").onclick = () => {
-    state.liked = !state.liked;
-    state.likes += state.liked ? 1 : -1;
-    el.querySelector(".like span").textContent = state.likes;
-    save();
-  };
-
-  el.querySelector(".retweet").onclick = () => {
-    state.retweeted = !state.retweeted;
-    state.retweets += state.retweeted ? 1 : -1;
-    el.querySelector(".retweet span").textContent = state.retweets;
-    save();
-  };
 }
 
-// -------- AI Summary --------
 function renderAISummary(p) {
   const el = document.createElement("article");
   el.className = "post ai-summary";
@@ -259,7 +269,6 @@ function renderAISummary(p) {
   thread.appendChild(el);
 }
 
-// -------- Replies --------
 function renderReply(r) {
   const el = document.createElement("article");
   el.className = "post";
@@ -277,7 +286,6 @@ function renderReply(r) {
   thread.appendChild(el);
 }
 
-// -------- User Comments --------
 function renderUserComments() {
   state.comments.forEach(c => {
     const el = document.createElement("article");
@@ -295,16 +303,31 @@ function renderUserComments() {
   });
 }
 
+// -------- Emoji Logic --------
+const emojiToggle = document.getElementById("emojiToggle");
+const emojiPanel = document.getElementById("emojiPanel");
+const textarea = document.getElementById("userReply");
+
+emojiToggle.onclick = () => {
+  emojiPanel.style.display =
+    emojiPanel.style.display === "block" ? "none" : "block";
+};
+
+emojiPanel.querySelectorAll("span").forEach(e => {
+  e.onclick = () => {
+    textarea.value += e.textContent;
+    textarea.focus();
+  };
+});
+
 // -------- Submit Reply --------
 document.getElementById("postReply").onclick = () => {
-  const ta = document.getElementById("userReply");
-  const txt = ta.value.trim();
+  const txt = textarea.value.trim();
   if (!txt) return;
-
   state.comments.push(txt);
-  ta.value = "";
+  textarea.value = "";
   save();
-  location.reload(); // ensures count sync + order
+  location.reload();
 };
 </script>
 
