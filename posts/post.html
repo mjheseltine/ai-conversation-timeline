@@ -90,13 +90,12 @@ body { background:var(--bg); margin:20px; }
   border:1px solid #fbe5b3;
 }
 
-/* USER COMMENT */
+/* USER COMMENT HIGHLIGHT */
 .user-comment {
   background:#f0f7ff;
   border:1px solid #dbeafe;
 }
 
-/* COMMENT BOX */
 .comment-box {
   margin-top:14px;
 }
@@ -110,13 +109,8 @@ body { background:var(--bg); margin:20px; }
   font-size:14px;
 }
 
-.comment-controls {
-  display:flex;
-  gap:8px;
-  margin-top:6px;
-}
-
 .comment-box button {
+  margin-top:6px;
   background:var(--accent);
   color:white;
   border:none;
@@ -124,22 +118,6 @@ body { background:var(--bg); margin:20px; }
   border-radius:8px;
   font-weight:600;
   cursor:pointer;
-}
-
-/* EMOJI PANEL */
-.emoji-panel {
-  display:none;
-  margin-top:6px;
-  background:#f9fafb;
-  border:1px solid #e5e7eb;
-  border-radius:8px;
-  padding:6px;
-  font-size:20px;
-}
-
-.emoji-panel span {
-  cursor:pointer;
-  margin:4px;
 }
 
 #backBtn {
@@ -162,22 +140,14 @@ body { background:var(--bg); margin:20px; }
 
   <div class="comment-box">
     <textarea id="userReply" placeholder="Write a reply..."></textarea>
-
-    <div class="comment-controls">
-      <button id="emojiToggle">😊</button>
-      <button id="postReply">Reply</button>
-    </div>
-
-    <div id="emojiPanel" class="emoji-panel">
-      😀 😅 😂 😊 😍 🤔 😡 😢 👍 👎 🎉 ❤️ 🔥 🤖
-    </div>
+    <button id="postReply">Reply</button>
   </div>
 
   <a id="backBtn" href="../index.html">⬅ Back to Timeline</a>
 </div>
 
 <script>
-// -------- Helpers --------
+// ---------- Helpers ----------
 function initials(name) {
   return name.split(/\s+/).map(w => w[0]).join("").slice(0,2).toUpperCase();
 }
@@ -193,7 +163,7 @@ function colorFromName(name) {
   return colors[name.charCodeAt(0) % colors.length];
 }
 
-// -------- Load ID + State --------
+// ---------- Load ID + State ----------
 const postId = new URLSearchParams(location.search).get("id");
 
 let timelineState = JSON.parse(sessionStorage.getItem("timelineState") || "{}");
@@ -213,7 +183,10 @@ function save() {
 
 const thread = document.getElementById("thread");
 
-// -------- Load Post --------
+// ---------- Timing ----------
+const convoStart = Date.now();
+
+// ---------- Load Post ----------
 fetch("../data/posts.json")
   .then(r => r.json())
   .then(posts => {
@@ -232,7 +205,7 @@ fetch("../data/posts.json")
     renderUserComments();
   });
 
-// -------- Render Functions --------
+// ---------- Render Main ----------
 function renderMainPost(p) {
   const el = document.createElement("article");
   el.className = "post";
@@ -248,12 +221,44 @@ function renderMainPost(p) {
       </div>
       <div class="text">${p.text}</div>
       ${p.image ? `<img src="../${p.image}" class="thumb">` : ""}
+      <div class="actions">
+        <button class="like ${state.liked ? "liked":""}">❤️ <span>${state.likes}</span></button>
+        <button class="retweet ${state.retweeted ? "retweeted":""}">🔁 <span>${state.retweets}</span></button>
+        <button class="comment">💬 <span>${p.replies.length + state.comments.length}</span></button>
+      </div>
     </div>
   `;
 
   thread.appendChild(el);
+
+  el.querySelector(".like").onclick = () => {
+    state.liked = !state.liked;
+    state.likes += state.liked ? 1 : -1;
+    el.querySelector(".like span").textContent = state.likes;
+    save();
+
+    window.parent.postMessage({
+      type: "USER_LIKE",
+      postId,
+      count: state.likes
+    }, "*");
+  };
+
+  el.querySelector(".retweet").onclick = () => {
+    state.retweeted = !state.retweeted;
+    state.retweets += state.retweeted ? 1 : -1;
+    el.querySelector(".retweet span").textContent = state.retweets;
+    save();
+
+    window.parent.postMessage({
+      type: "USER_RETWEET",
+      postId,
+      count: state.retweets
+    }, "*");
+  };
 }
 
+// ---------- AI Summary ----------
 function renderAISummary(p) {
   const el = document.createElement("article");
   el.className = "post ai-summary";
@@ -269,6 +274,7 @@ function renderAISummary(p) {
   thread.appendChild(el);
 }
 
+// ---------- Replies ----------
 function renderReply(r) {
   const el = document.createElement("article");
   el.className = "post";
@@ -286,6 +292,7 @@ function renderReply(r) {
   thread.appendChild(el);
 }
 
+// ---------- User Comments ----------
 function renderUserComments() {
   state.comments.forEach(c => {
     const el = document.createElement("article");
@@ -303,32 +310,47 @@ function renderUserComments() {
   });
 }
 
-// -------- Emoji Logic --------
-const emojiToggle = document.getElementById("emojiToggle");
-const emojiPanel = document.getElementById("emojiPanel");
-const textarea = document.getElementById("userReply");
-
-emojiToggle.onclick = () => {
-  emojiPanel.style.display =
-    emojiPanel.style.display === "block" ? "none" : "block";
-};
-
-emojiPanel.querySelectorAll("span").forEach(e => {
-  e.onclick = () => {
-    textarea.value += e.textContent;
-    textarea.focus();
-  };
-});
-
-// -------- Submit Reply --------
+// ---------- Submit Reply ----------
 document.getElementById("postReply").onclick = () => {
-  const txt = textarea.value.trim();
+  const ta = document.getElementById("userReply");
+  const txt = ta.value.trim();
   if (!txt) return;
+
   state.comments.push(txt);
-  textarea.value = "";
   save();
+
+  window.parent.postMessage({
+    type: "USER_COMMENT",
+    postId,
+    text: txt
+  }, "*");
+
+  ta.value = "";
   location.reload();
 };
+
+// ---------- Scroll Depth (Conversation) ----------
+window.addEventListener("scroll", () => {
+  const depth = Math.round(
+    (window.scrollY + window.innerHeight) /
+    document.body.scrollHeight * 100
+  );
+
+  window.parent.postMessage({
+    type: "SCROLL_DEPTH_CONVO",
+    postId,
+    depth
+  }, "*");
+});
+
+// ---------- Time on Conversation ----------
+window.addEventListener("beforeunload", () => {
+  window.parent.postMessage({
+    type: "TIME_ON_CONVO",
+    postId,
+    ms: Date.now() - convoStart
+  }, "*");
+});
 </script>
 
 </body>
