@@ -59,6 +59,35 @@
 
   {
     "id": "post3",
+    "author": "wowsomuchpolitics",
+    "handle": "@pol_wow",
+    "text": "This bodes ill. Readers used to outnumber non-readers two to one. Now non-readers outnumber readers three to one. It's hard to imagine a change of that magnitude not having significant effects.",
+    "likes": 98,
+    "retweets": 17,
+    "timestamp": "3h",
+    "image": "images/post4_thumb.jpg",
+    "aiSummary": "Post reports on Epstein emails implicating Trump, with reactions split between dismissing the claims as partisan attacks and insisting Republicans fear political fallout.",
+    "replies": [
+      {
+        "author": "ant hooper",
+        "handle": "@hooper",
+        "text": "Just as important... Look at the slope of that line. The ratio is changing fast."
+      },
+      {
+        "author": "andreas",
+        "handle": "@andre_as",
+        "text": "Reading and writing had a good run. Five hundred years or so from the invention of the printing press to the invention of the iPhone. It’s over now. No real need to read anymore"
+      },
+      {
+        "author": "jimboot",
+        "handle": "@jimboot",
+        "text": "It's moved from eyes to ears. Learning is still happening but via different head holes."
+      }
+    ]
+  },
+
+  {
+    "id": "post4",
     "author": "USPolitics",
     "handle": "@uspolitics",
     "text": "John F. Kennedy’s grandson Jack Schlossberg is making a run for the U.S. House next year.",
