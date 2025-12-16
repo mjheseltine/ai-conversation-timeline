@@ -1,237 +1,421 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Social Feed</title>
-  <link rel="stylesheet" href="styles.css">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Timeline</title>
 
-  <style>
-    .layout {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-    }
+<style>
+:root {
+  --bg: #f6f7fb;
+  --card: #fff;
+  --muted: #6b7280;
+  --accent: #1f6feb;
+  --radius: 12px;
+  --shadow: 0 4px 12px rgba(35, 40, 50, 0.08);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto;
+}
 
-    .sidebar {
-      width: 260px;
-      background: #fff;
-      border-radius: 10px;
-      padding: 12px;
-      height: fit-content;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      font-size: 0.9em;
-    }
+body { background: var(--bg); margin: 20px; }
 
-    .sidebar h3 {
-      margin-top: 0;
-      font-size: 1em;
-    }
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+  max-width: 1100px;
+  margin: auto;
+}
 
-    .search-box input {
-      width: 100%;
-      padding: 6px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-    }
+.container { max-width: 800px; }
 
-    .trend {
-      margin: 6px 0;
-      color: #1da1f2;
-      cursor: pointer;
-    }
+.post {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 12px;
+  box-shadow: var(--shadow);
+}
 
-    .comment-input {
-      display: flex;
-      gap: 6px;
-      margin-top: 6px;
-    }
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #fff;
+}
 
-    .comment-input textarea {
-      flex: 1;
-      resize: none;
-      border-radius: 6px;
-      padding: 6px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-    }
+.content { flex: 1; }
 
-    .emoji-btn {
-      cursor: pointer;
-      background: none;
-      border: none;
-      font-size: 18px;
-    }
-  </style>
+.meta { font-size: 13px; color: var(--muted); }
+
+.name { font-weight: 700; margin-right: 6px; }
+
+.text { margin-top: 6px; font-size: 15px; line-height: 1.4; }
+
+.thumb {
+  width: 100%;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 20px;
+  color: var(--muted);
+}
+
+.actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.actions button:hover { background: #f1f5f9; }
+
+.liked { color: #e0245e; }
+.retweeted { color: #17bf63; }
+
+.comment-box {
+  margin-top: 10px;
+  display: none;
+}
+
+.comment-box textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 8px;
+  font-size: 14px;
+}
+
+.comment-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.comment-box button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.emoji-panel {
+  display: none;
+  margin-top: 6px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 20px;
+}
+
+.emoji-panel span { cursor: pointer; margin: 4px; }
+
+.sidebar { position: sticky; top: 20px; }
+
+.widget {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.widget h3 { margin: 0 0 10px; font-size: 15px; }
+
+.search-widget input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+
+#trendingList li {
+  list-style: none;
+  padding: 6px 0;
+  font-weight: 600;
+  color: #1f6feb;
+  cursor: pointer;
+}
+
+#trendingList li:hover { text-decoration: underline; }
+</style>
 </head>
 
 <body>
 
 <div class="layout">
+  <main class="container" id="timeline"></main>
 
-  <!-- LEFT / TIMELINE -->
-  <div id="timeline"></div>
-
-  <!-- RIGHT / SIDEBAR -->
-  <div class="sidebar">
-    <div class="search-box">
-      <input type="text" placeholder="Search">
+  <aside class="sidebar">
+    <div class="widget search-widget">
+      <input id="searchInput" placeholder="Search posts">
     </div>
 
-    <h3>Trending</h3>
-    <div class="trend">#Election2024</div>
-    <div class="trend">#AIandPolitics</div>
-    <div class="trend">#StudentDebt</div>
-    <div class="trend">#ClimatePolicy</div>
+    <div class="widget">
+      <h3>Trending</h3>
+      <ul id="trendingList"></ul>
+    </div>
 
-    <h3>Local Weather</h3>
-    <div id="weather">Loading...</div>
-  </div>
-
+    <div class="widget">
+      <h3>Local Weather</h3>
+      <div id="weather">Loading…</div>
+    </div>
+  </aside>
 </div>
 
 <script>
-/* ===============================
-   QUALTRICS MESSAGING
-================================ */
-function sendToQualtrics(type, payload = {}) {
-  window.parent.postMessage({ type, ...payload }, "*");
+// ---------- Helpers ----------
+function initials(name) {
+  return name.split(/\s+/).map(w => w[0]).join("").slice(0,2).toUpperCase();
 }
 
-/* ===============================
-   DATA
-================================ */
-const posts = [
-  {
-    id: "post1",
-    user: "Alex",
-    text: "AI summaries are starting to shape how people understand political debates."
-  },
-  {
-    id: "post2",
-    user: "Jordan",
-    text: "Social media platforms have too much power over public discourse."
-  }
-];
+function colorFromName(name) {
+  const colors = [
+    "linear-gradient(135deg,#1f6feb,#3b82f6)",
+    "linear-gradient(135deg,#10b981,#34d399)",
+    "linear-gradient(135deg,#f59e0b,#fbbf24)",
+    "linear-gradient(135deg,#ec4899,#f472b6)",
+    "linear-gradient(135deg,#6366f1,#8b5cf6)"
+  ];
+  return colors[name.charCodeAt(0) % colors.length];
+}
 
-/* ===============================
-   RENDER POSTS
-================================ */
+// ---------- State ----------
+let timelineState = JSON.parse(sessionStorage.getItem("timelineState") || "{}");
+function save() {
+  sessionStorage.setItem("timelineState", JSON.stringify(timelineState));
+}
+
 const timeline = document.getElementById("timeline");
+let allPosts = [];
 
-posts.forEach(post => {
-  timeline.appendChild(createPost(post));
-});
+// ---------- Timing ----------
+const timelineStart = Date.now();
 
-/* ===============================
-   CREATE POST
-================================ */
-function createPost(post) {
-  const el = document.createElement("div");
-  el.className = "post";
+// ---------- Load ----------
+fetch("data/posts.json")
+  .then(r => r.json())
+  .then(posts => {
+    allPosts = posts;
+    renderTimeline(posts);
+  });
 
-  el.innerHTML = `
-    <div class="avatar" style="background:#1da1f2">${post.user[0]}</div>
+function renderTimeline(posts) {
+  timeline.innerHTML = "";
+  posts.forEach(p => timeline.appendChild(createPost(p)));
+}
+
+// ---------- Create Post ----------
+function createPost(data) {
+  const state = timelineState[data.id] ||= {
+    likes: data.likes || 0,
+    retweets: data.retweets || 0,
+    comments: [],
+    liked: false,
+    retweeted: false
+  };
+
+  const wrapper = document.createElement("article");
+  wrapper.className = "post";
+
+  wrapper.innerHTML = `
+    <div class="avatar" style="background:${colorFromName(data.author)}">
+      ${initials(data.author)}
+    </div>
+
     <div class="content">
-      <strong>${post.user}</strong>
-      <p>${post.text}</p>
+      <div class="meta">
+        <span class="name">${data.author}</span>
+        ${data.handle} · ${data.timestamp}
+      </div>
+
+      <div class="text">${data.text}</div>
+      ${data.image ? `<img src="${data.image}" class="thumb">` : ""}
 
       <div class="actions">
-        <button class="like">Like</button>
-        <button class="retweet">Repost</button>
-        <button class="open">View conversation</button>
+        <button class="like ${state.liked ? "liked":""}">❤️ <span>${state.likes}</span></button>
+        <button class="retweet ${state.retweeted ? "retweeted":""}">🔁 <span>${state.retweets}</span></button>
+        <button class="comment">💬 <span>${data.replies.length + state.comments.length}</span></button>
       </div>
 
-      <div class="comment-section">
-        <div class="comment-input">
-          <textarea rows="2" placeholder="Write a reply..."></textarea>
-          <button class="emoji-btn">😊</button>
-          <button class="submit">Post</button>
+      <div class="comment-box">
+        <textarea placeholder="Write a comment..."></textarea>
+
+        <div class="comment-controls">
+          <button class="emoji-toggle">😊</button>
+          <button class="submit">Reply</button>
+        </div>
+
+        <div class="emoji-panel">
+          <span>😀</span><span>😂</span><span>😊</span><span>😍</span>
+          <span>🤔</span><span>😡</span><span>😢</span><span>👍</span>
+          <span>👎</span><span>🎉</span><span>❤️</span><span>🔥</span>
         </div>
       </div>
+
+      <a class="view-link" href="posts/post.html?id=${data.id}">View conversation →</a>
     </div>
   `;
 
-  /* ---- Hover ---- */
-  el.addEventListener("mouseenter", () => {
-    sendToQualtrics("USER_HOVER_POST", { postId: post.id });
+  /* ---------- Qualtrics Hooks ---------- */
+
+  wrapper.addEventListener("mouseenter", () => {
+    window.parent.postMessage({ type: "USER_HOVER_POST", postId: data.id }, "*");
   });
 
-  /* ---- Like ---- */
-  let likeCount = 0;
-  el.querySelector(".like").onclick = () => {
-    likeCount++;
-    sendToQualtrics("USER_LIKE", {
-      postId: post.id,
-      count: likeCount
-    });
+  wrapper.querySelector(".view-link").onclick = () => {
+    window.parent.postMessage({ type: "POST_OPEN", postId: data.id }, "*");
   };
 
-  /* ---- Retweet ---- */
-  let rtCount = 0;
-  el.querySelector(".retweet").onclick = () => {
-    rtCount++;
-    sendToQualtrics("USER_RETWEET", {
-      postId: post.id,
-      count: rtCount
-    });
+  const likeBtn = wrapper.querySelector(".like");
+  const rtBtn = wrapper.querySelector(".retweet");
+  const commentBtn = wrapper.querySelector(".comment");
+  const box = wrapper.querySelector(".comment-box");
+  const ta = wrapper.querySelector("textarea");
+  const submit = wrapper.querySelector(".submit");
+  const emojiToggle = wrapper.querySelector(".emoji-toggle");
+  const emojiPanel = wrapper.querySelector(".emoji-panel");
+
+  likeBtn.onclick = () => {
+    state.liked = !state.liked;
+    state.likes += state.liked ? 1 : -1;
+    likeBtn.classList.toggle("liked", state.liked);
+    likeBtn.querySelector("span").textContent = state.likes;
+    save();
+
+    window.parent.postMessage({
+      type: "USER_LIKE",
+      postId: data.id,
+      count: state.likes
+    }, "*");
   };
 
-  /* ---- Open Conversation ---- */
-  el.querySelector(".open").onclick = () => {
-    sendToQualtrics("POST_OPEN", { postId: post.id });
-    window.location.href = `post.html?post=${post.id}`;
+  rtBtn.onclick = () => {
+    state.retweeted = !state.retweeted;
+    state.retweets += state.retweeted ? 1 : -1;
+    rtBtn.classList.toggle("retweeted", state.retweeted);
+    rtBtn.querySelector("span").textContent = state.retweets;
+    save();
+
+    window.parent.postMessage({
+      type: "USER_RETWEET",
+      postId: data.id,
+      count: state.retweets
+    }, "*");
   };
 
-  /* ---- Comment box open ---- */
-  const textarea = el.querySelector("textarea");
-  textarea.addEventListener("focus", () => {
-    sendToQualtrics("COMMENT_BOX_OPEN", { postId: post.id });
+  commentBtn.onclick = () => {
+    box.style.display = box.style.display === "block" ? "none" : "block";
+    ta.focus();
+
+    window.parent.postMessage({
+      type: "COMMENT_BOX_OPEN",
+      postId: data.id
+    }, "*");
+  };
+
+  emojiToggle.onclick = () => {
+    emojiPanel.style.display =
+      emojiPanel.style.display === "block" ? "none" : "block";
+  };
+
+  emojiPanel.querySelectorAll("span").forEach(e => {
+    e.onclick = () => {
+      ta.value += e.textContent;
+      ta.focus();
+    };
   });
 
-  /* ---- Emoji ---- */
-  el.querySelector(".emoji-btn").onclick = () => {
-    textarea.value += "😊";
-    textarea.focus();
+  submit.onclick = () => {
+    const txt = ta.value.trim();
+    if (!txt) return;
+
+    state.comments.push(txt);
+    ta.value = "";
+    box.style.display = "none";
+    commentBtn.querySelector("span").textContent =
+      data.replies.length + state.comments.length;
+    save();
+
+    window.parent.postMessage({
+      type: "USER_COMMENT",
+      postId: data.id,
+      text: txt
+    }, "*");
   };
 
-  /* ---- Submit Comment ---- */
-  el.querySelector(".submit").onclick = () => {
-    if (!textarea.value.trim()) return;
-
-    sendToQualtrics("USER_COMMENT", {
-      postId: post.id,
-      text: textarea.value
-    });
-
-    textarea.value = "";
-  };
-
-  return el;
+  return wrapper;
 }
 
-/* ===============================
-   SCROLL DEPTH
-================================ */
+// ---------- Scroll Depth ----------
 window.addEventListener("scroll", () => {
   const depth = Math.round(
     (window.scrollY + window.innerHeight) /
     document.body.scrollHeight * 100
   );
 
-  sendToQualtrics("SCROLL_DEPTH", { depth });
+  window.parent.postMessage({
+    type: "SCROLL_DEPTH",
+    depth
+  }, "*");
 });
 
-/* ===============================
-   WEATHER (APPROX)
-================================ */
-navigator.geolocation?.getCurrentPosition(pos => {
-  document.getElementById("weather").innerText =
-    "Weather: Mild, 60s°F";
-}, () => {
-  document.getElementById("weather").innerText =
-    "Weather unavailable";
+// ---------- Time on Timeline ----------
+window.addEventListener("beforeunload", () => {
+  window.parent.postMessage({
+    type: "TIME_ON_TIMELINE",
+    ms: Date.now() - timelineStart
+  }, "*");
 });
+
+// ---------- Search ----------
+document.getElementById("searchInput").addEventListener("input", e => {
+  const q = e.target.value.toLowerCase();
+  renderTimeline(
+    allPosts.filter(p =>
+      p.text.toLowerCase().includes(q) ||
+      p.author.toLowerCase().includes(q)
+    )
+  );
+});
+
+// ---------- Trending ----------
+["#GovernmentShutdown","#Trump","#BreakingNews","#AI","#MediaBias","#Congress"]
+.forEach(tag => {
+  const li = document.createElement("li");
+  li.textContent = tag;
+  li.onclick = () => {
+    searchInput.value = tag;
+    searchInput.dispatchEvent(new Event("input"));
+  };
+  trendingList.appendChild(li);
+});
+
+// ---------- Weather ----------
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(pos => {
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&current_weather=true`)
+      .then(r => r.json())
+      .then(d => {
+        weather.innerHTML =
+          `<strong>${Math.round(d.current_weather.temperature)}°C</strong><br>
+           Wind ${d.current_weather.windspeed} km/h`;
+      });
+  });
+}
 </script>
 
 </body>
