@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Timeline</title>
 
-<!-- Emoji picker (stable CDN, no modules) -->
-<script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.2/dist/index.min.js"></script>
-
 <style>
 :root {
   --bg: #f6f7fb;
@@ -56,9 +53,7 @@ body {
   color: #fff;
 }
 
-.content {
-  flex: 1;
-}
+.content { flex: 1; }
 
 .meta {
   font-size: 13px;
@@ -104,6 +99,7 @@ body {
 .liked { color: #e0245e; }
 .retweeted { color: #17bf63; }
 
+/* COMMENT BOX */
 .comment-box {
   margin-top: 10px;
   display: none;
@@ -121,7 +117,6 @@ body {
   display: flex;
   gap: 8px;
   margin-top: 6px;
-  align-items: center;
 }
 
 .comment-box button {
@@ -134,20 +129,23 @@ body {
   cursor: pointer;
 }
 
-.emoji-btn {
-  background: #f1f5f9;
-  color: #333;
-  font-size: 18px;
+/* EMOJI PANEL */
+.emoji-panel {
+  display: none;
+  margin-top: 6px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px;
+  font-size: 20px;
 }
 
-.view-link {
-  display: inline-block;
-  margin-top: 10px;
-  color: var(--accent);
-  font-weight: 600;
-  text-decoration: none;
+.emoji-panel span {
+  cursor: pointer;
+  margin: 4px;
 }
 
+/* SIDEBAR */
 .sidebar {
   position: sticky;
   top: 20px;
@@ -210,7 +208,7 @@ body {
 </div>
 
 <script>
-// -------- Helpers --------
+// ---------- Helpers ----------
 function initials(name) {
   return name.split(/\s+/).map(w => w[0]).join("").slice(0,2).toUpperCase();
 }
@@ -226,9 +224,8 @@ function colorFromName(name) {
   return colors[name.charCodeAt(0) % colors.length];
 }
 
-// -------- State --------
+// ---------- State ----------
 let timelineState = JSON.parse(sessionStorage.getItem("timelineState") || "{}");
-
 function save() {
   sessionStorage.setItem("timelineState", JSON.stringify(timelineState));
 }
@@ -236,7 +233,7 @@ function save() {
 const timeline = document.getElementById("timeline");
 let allPosts = [];
 
-// -------- Load Posts --------
+// ---------- Load ----------
 fetch("data/posts.json")
   .then(r => r.json())
   .then(posts => {
@@ -249,7 +246,7 @@ function renderTimeline(posts) {
   posts.forEach(p => timeline.appendChild(createPost(p)));
 }
 
-// -------- Create Post --------
+// ---------- Create Post ----------
 function createPost(data) {
   const state = timelineState[data.id] ||= {
     likes: data.likes || 0,
@@ -262,73 +259,95 @@ function createPost(data) {
   const wrapper = document.createElement("article");
   wrapper.className = "post";
 
-  const avatar = document.createElement("div");
-  avatar.className = "avatar";
-  avatar.style.background = colorFromName(data.author);
-  avatar.textContent = initials(data.author);
-
-  const c = document.createElement("div");
-  c.className = "content";
-
-  c.innerHTML = `
-    <div class="meta">
-      <span class="name">${data.author}</span>
-      ${data.handle} · ${data.timestamp}
+  wrapper.innerHTML = `
+    <div class="avatar" style="background:${colorFromName(data.author)}">
+      ${initials(data.author)}
     </div>
 
-    <div class="text">${data.text}</div>
-
-    ${data.image ? `<img src="${data.image}" class="thumb">` : ""}
-
-    <div class="actions">
-      <button class="like ${state.liked ? "liked" : ""}">❤️ <span>${state.likes}</span></button>
-      <button class="retweet ${state.retweeted ? "retweeted" : ""}">🔁 <span>${state.retweets}</span></button>
-      <button class="comment">💬 <span>${data.replies.length + state.comments.length}</span></button>
-    </div>
-
-    <div class="comment-box">
-      <textarea placeholder="Write a comment..."></textarea>
-      <div class="comment-controls">
-        <button class="emoji-btn">😊</button>
-        <button class="submit-btn">Reply</button>
+    <div class="content">
+      <div class="meta">
+        <span class="name">${data.author}</span>
+        ${data.handle} · ${data.timestamp}
       </div>
-    </div>
 
-    <a class="view-link" href="posts/post.html?id=${data.id}">
-      View conversation →
-    </a>
+      <div class="text">${data.text}</div>
+      ${data.image ? `<img src="${data.image}" class="thumb">` : ""}
+
+      <div class="actions">
+        <button class="like ${state.liked ? "liked":""}">❤️ <span>${state.likes}</span></button>
+        <button class="retweet ${state.retweeted ? "retweeted":""}">🔁 <span>${state.retweets}</span></button>
+        <button class="comment">💬 <span>${data.replies.length + state.comments.length}</span></button>
+      </div>
+
+      <div class="comment-box">
+        <textarea placeholder="Write a comment..."></textarea>
+
+        <div class="comment-controls">
+          <button class="emoji-toggle">😊</button>
+          <button class="submit">Reply</button>
+        </div>
+
+        <div class="emoji-panel">
+          <span>😀</span><span>😂</span><span>😊</span><span>😍</span>
+          <span>🤔</span><span>😡</span><span>😢</span><span>👍</span>
+          <span>👎</span><span>🎉</span><span>❤️</span><span>🔥</span>
+        </div>
+      </div>
+
+      <a class="view-link" href="posts/post.html?id=${data.id}">
+        View conversation →
+      </a>
+    </div>
   `;
 
-  wrapper.append(avatar, c);
+  const likeBtn = wrapper.querySelector(".like");
+  const rtBtn = wrapper.querySelector(".retweet");
+  const commentBtn = wrapper.querySelector(".comment");
+  const box = wrapper.querySelector(".comment-box");
+  const ta = wrapper.querySelector("textarea");
+  const submit = wrapper.querySelector(".submit");
+  const emojiToggle = wrapper.querySelector(".emoji-toggle");
+  const emojiPanel = wrapper.querySelector(".emoji-panel");
 
-  const commentBtn = c.querySelector(".comment");
-  const commentBox = c.querySelector(".comment-box");
-  const ta = c.querySelector("textarea");
-  const submit = c.querySelector(".submit-btn");
-  const emojiBtn = c.querySelector(".emoji-btn");
+  likeBtn.onclick = () => {
+    state.liked = !state.liked;
+    state.likes += state.liked ? 1 : -1;
+    likeBtn.classList.toggle("liked", state.liked);
+    likeBtn.querySelector("span").textContent = state.likes;
+    save();
+  };
 
-  // --- Emoji picker ---
-  const picker = new EmojiButton({ position: 'top-start' });
-  emojiBtn.onclick = () => picker.togglePicker(emojiBtn);
-  picker.on('emoji', emoji => {
-    ta.value += emoji;
-    ta.focus();
-  });
+  rtBtn.onclick = () => {
+    state.retweeted = !state.retweeted;
+    state.retweets += state.retweeted ? 1 : -1;
+    rtBtn.classList.toggle("retweeted", state.retweeted);
+    rtBtn.querySelector("span").textContent = state.retweets;
+    save();
+  };
 
-  commentBtn.onclick = e => {
-    e.stopPropagation();
-    commentBox.style.display =
-      commentBox.style.display === "block" ? "none" : "block";
+  commentBtn.onclick = () => {
+    box.style.display = box.style.display === "block" ? "none" : "block";
     ta.focus();
   };
 
-  submit.onclick = e => {
-    e.stopPropagation();
+  emojiToggle.onclick = () => {
+    emojiPanel.style.display =
+      emojiPanel.style.display === "block" ? "none" : "block";
+  };
+
+  emojiPanel.querySelectorAll("span").forEach(e => {
+    e.onclick = () => {
+      ta.value += e.textContent;
+      ta.focus();
+    };
+  });
+
+  submit.onclick = () => {
     const txt = ta.value.trim();
     if (!txt) return;
     state.comments.push(txt);
     ta.value = "";
-    commentBox.style.display = "none";
+    box.style.display = "none";
     commentBtn.querySelector("span").textContent =
       data.replies.length + state.comments.length;
     save();
@@ -337,7 +356,7 @@ function createPost(data) {
   return wrapper;
 }
 
-// -------- Search --------
+// ---------- Search ----------
 document.getElementById("searchInput").addEventListener("input", e => {
   const q = e.target.value.toLowerCase();
   renderTimeline(
@@ -348,7 +367,7 @@ document.getElementById("searchInput").addEventListener("input", e => {
   );
 });
 
-// -------- Trending --------
+// ---------- Trending ----------
 const trending = [
   "#GovernmentShutdown",
   "#Trump",
@@ -369,7 +388,7 @@ trending.forEach(tag => {
   tList.appendChild(li);
 });
 
-// -------- Weather --------
+// ---------- Weather ----------
 if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(pos => {
     const { latitude, longitude } = pos.coords;
